@@ -19,8 +19,9 @@ Q′ = Q cos 2φ + U sin 2φ, U′ = −Q sin 2φ + U cos 2φ), scatter by θ in
 u′ = cos θ u + sin θ v₁, v′ = −sin θ u + cos θ v₁, and S′ = M(θ) S′ normalised to I = 1 (the
 weight is unchanged because θ, φ are sampled from the exact distribution).
 
-Stage S6a: layers with matched refractive indices (no Fresnel at the boundaries); Fresnel Mueller
-matrices at index steps follow in S6b.
+Boundaries (S6b): plane interfaces with the polarised Fresnel event `interface` (amplitudes
+r_p, r_s, t_p, t_s in the plane-of-incidence frame p̂ = ŝ × û, including total internal
+reflection with its phase).
 """
 
 from __future__ import annotations
@@ -141,6 +142,104 @@ def apply_scattering(
     return u_new, v_new, s_new
 
 
+def fresnel_amplitudes(
+    n1: float, n2: float, cos_i: FloatArray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:  # type: ignore[type-arg]
+    """Complex Fresnel amplitudes (r_p, r_s, t_p, t_s) and cos θ_t for fields in the bases
+    p̂ = ŝ × û, ŝ = (û × n̂)/|û × n̂| (e^(−iωt); beyond the critical angle cos θ_t = +i√…, the
+    evanescent wave decays). With these bases r_p = r_s at normal incidence up to the sign of the
+    reflected p̂ (p̂_r = −p̂_i), as in Raytatouille's Convention A."""
+    cos_i = np.abs(np.asarray(cos_i, dtype=np.float64))
+    sin2_t = (n1 / n2) ** 2 * (1 - cos_i**2)
+    cos_t = np.where(
+        sin2_t <= 1,
+        np.sqrt(np.clip(1 - sin2_t, 0, None)) + 0j,
+        1j * np.sqrt(np.clip(sin2_t - 1, 0, None)),
+    )
+    r_s = (n1 * cos_i - n2 * cos_t) / (n1 * cos_i + n2 * cos_t)
+    r_p = (n2 * cos_i - n1 * cos_t) / (n2 * cos_i + n1 * cos_t)
+    t_s = 2 * n1 * cos_i / (n1 * cos_i + n2 * cos_t)
+    t_p = 2 * n1 * cos_i / (n2 * cos_i + n1 * cos_t)
+    return r_p, r_s, t_p, t_s, cos_t
+
+
+def apply_amplitudes(a_p: np.ndarray, a_s: np.ndarray, stokes: FloatArray) -> FloatArray:  # type: ignore[type-arg]
+    """Stokes (in the frame v = p̂, w = ŝ) after E_p → a_p E_p, E_s → a_s E_s; not normalised."""
+    i, q, u, v = stokes[:, 0], stokes[:, 1], stokes[:, 2], stokes[:, 3]
+    pp, ss = np.abs(a_p) ** 2, np.abs(a_s) ** 2
+    c = a_p * np.conj(a_s)
+    return np.column_stack(
+        [
+            0.5 * (pp + ss) * i + 0.5 * (pp - ss) * q,
+            0.5 * (pp - ss) * i + 0.5 * (pp + ss) * q,
+            c.real * u + c.imag * v,
+            -c.imag * u + c.real * v,
+        ]
+    )
+
+
+def frame_to_plane(
+    u: FloatArray, v: FloatArray, stokes: FloatArray, normal: FloatArray
+) -> tuple[FloatArray, FloatArray, FloatArray]:
+    """Rotate the Stokes frame to (p̂, ŝ) of the plane of incidence with the surface normal.
+    Returns (p̂, ŝ, rotated Stokes). Along the normal any ŝ ⊥ û is chosen (the current w)."""
+    w = np.cross(u, v)
+    s_hat = np.cross(u, normal)
+    norm = np.linalg.norm(s_hat, axis=1)
+    along = norm < 1e-12
+    s_hat = np.where(along[:, None], w, s_hat / np.where(along, 1.0, norm)[:, None])
+    p_hat = np.cross(s_hat, u)
+    phi = np.arctan2(np.sum(w * p_hat, axis=1), np.sum(v * p_hat, axis=1))
+    q, uu = rotate_stokes(stokes[:, 1], stokes[:, 2], phi)
+    out = np.column_stack([stokes[:, 0], q, uu, stokes[:, 3]])
+    return (
+        np.asarray(p_hat, dtype=np.float64),
+        np.asarray(s_hat, dtype=np.float64),
+        np.asarray(out, dtype=np.float64),
+    )
+
+
+def interface(
+    u: FloatArray,
+    v: FloatArray,
+    stokes: FloatArray,
+    n1: float,
+    n2: float,
+    normal: FloatArray,
+    xi: FloatArray,
+) -> tuple[FloatArray, FloatArray, FloatArray, np.ndarray]:  # type: ignore[type-arg]
+    """Polarised Fresnel event at a plane surface (normal pointing from medium 1 into medium 2):
+    the reflectance R(S) = ½(|r_p|² + |r_s|²) + ½(|r_p|² − |r_s|²) Q/I (in the p/s frame) decides
+    reflection (ξ < R) or transmission; the Stokes vector follows the Fresnel amplitudes and is
+    normalised to I = 1. Returns new u, v (= p̂ of the new direction), Stokes, reflected mask."""
+    if n1 == n2:
+        return u, v, stokes, np.zeros(len(u), dtype=bool)
+    p_hat, s_hat, st = frame_to_plane(u, v, stokes, normal)
+    cos_i = np.abs(np.sum(u * normal, axis=1))
+    r_p, r_s, t_p, t_s, cos_t = fresnel_amplitudes(n1, n2, cos_i)
+    big_r = (
+        0.5 * (np.abs(r_p) ** 2 + np.abs(r_s) ** 2)
+        + 0.5 * (np.abs(r_p) ** 2 - np.abs(r_s) ** 2) * st[:, 1]
+    )
+    refl = xi < big_r
+    u_new = u.copy()
+    u_new[refl] = u[refl] - 2 * (np.sum(u[refl] * normal[refl], axis=1))[:, None] * normal[refl]
+    tr = ~refl
+    ratio = n1 / n2
+    ct = np.real(cos_t[tr])
+    u_new[tr] = ratio * u[tr] + (ct - ratio * cos_i[tr])[:, None] * normal[tr]
+    s_new = np.where(refl[:, None], apply_amplitudes(r_p, r_s, st), apply_amplitudes(t_p, t_s, st))
+    s_new = s_new / s_new[:, 0:1]
+    u_new /= np.linalg.norm(u_new, axis=1)[:, None]
+    v_new = np.cross(s_hat, u_new)
+    return (
+        np.asarray(u_new),
+        np.asarray(v_new, dtype=np.float64),
+        np.asarray(s_new, dtype=np.float64),
+        refl,
+    )
+
+
 @dataclass
 class PolarisedResult:
     side: np.ndarray  # type: ignore[type-arg]
@@ -150,6 +249,7 @@ class PolarisedResult:
     weight: FloatArray  # per incident power
     scatterings: np.ndarray  # type: ignore[type-arg]
     packets: int
+    specular: tuple[float, FloatArray] | None = None  # (reflectance, Stokes) at entry
 
 
 def simulate_polarised(
@@ -163,47 +263,101 @@ def simulate_polarised(
     w_threshold: float = 1e-4,
     roulette_m: float = 10.0,
     max_events: int = 100_000,
+    n_slab: float = 1.0,
+    n_above: float = 1.0,
+    n_below: float = 1.0,
+    cos_incident: float = 1.0,
 ) -> PolarisedResult:
-    """Slab 0 < z < d (np.inf: half space), index-matched, normal incidence along +z with the
-    Stokes vector `stokes_in` in the frame v = x̂ (w = ŷ)."""
+    """Slab 0 < z < d (np.inf: half space) of index n_slab between n_above and n_below; incidence
+    from above in the x–z plane at θ = acos(cos_incident) with the Stokes vector `stokes_in` in the
+    frame v = p̂ (in the plane of incidence; at normal incidence v = x̂), w = ŝ. Fresnel events with
+    the polarised reflectance (S6b); the specular reflection at entry is returned separately in
+    `PolarisedResult.specular` (Stokes in the reflected p/s frame, weight = reflectance)."""
     rng = np.random.default_rng(seed)
     mut = mua + mus
     s_in = np.asarray(stokes_in, dtype=np.float64) / stokes_in[0]
-    u = np.tile([0.0, 0.0, 1.0], (packets, 1))
-    v = np.tile([1.0, 0.0, 0.0], (packets, 1))
-    s = np.tile(s_in, (packets, 1))
+    sin_i = np.sqrt(1 - cos_incident**2)
+    u0 = np.array([[sin_i, 0.0, cos_incident]])
+    # p̂ = ŝ × û with ŝ = (û × ẑ)/|…| = −ŷ for incidence in the x–z plane; at normal incidence x̂
+    v0 = np.array([[cos_incident, 0.0, -sin_i]]) if sin_i > 0 else np.array([[1.0, 0.0, 0.0]])
+    zhat = np.array([[0.0, 0.0, 1.0]])
+    # entry: deterministic split into specular reflection and transmitted part
+    p_hat, s_hat, st = frame_to_plane(u0, v0, s_in[None, :], zhat)
+    r_p, r_s, t_p, t_s, cos_t = fresnel_amplitudes(n_above, n_slab, np.array([cos_incident]))
+    s_r = apply_amplitudes(r_p, r_s, st)[0]
+    s_t = apply_amplitudes(t_p, t_s, st)[0]
+    big_r = float(s_r[0])  # reflectance for I = 1
+    ratio = n_above / n_slab
+    ut = ratio * u0[0] + (float(np.real(cos_t[0])) - ratio * cos_incident) * zhat[0]
+    ut /= np.linalg.norm(ut)
+    vt = np.cross(s_hat[0], ut)
+    specular = (big_r, s_r / s_r[0] if big_r > 0 else s_r)
+    u = np.tile(ut, (packets, 1))
+    v = np.tile(vt, (packets, 1))
+    s = np.tile(s_t / s_t[0], (packets, 1))
     z = np.zeros(packets)
-    w = np.ones(packets)
+    w = np.full(packets, 1.0 - big_r)
     alive = np.ones(packets, dtype=bool)
     nsc = np.zeros(packets, dtype=np.int64)
     side = np.zeros(packets, dtype=np.int64)
+    s_left = np.zeros(packets)
     for _ in range(max_events):
         idx = np.nonzero(alive)[0]
         if idx.size == 0:
             break
-        step = -np.log(rng.random(idx.size)) / mut
-        z_new = z[idx] + u[idx, 2] * step
-        out_top, out_bot = z_new < 0, z_new > d
-        side[idx[out_top]], side[idx[out_bot]] = -1, 1
-        alive[idx[out_top | out_bot]] = False
-        stay = idx[~(out_top | out_bot)]
-        z[stay] = z_new[~(out_top | out_bot)]
-        w[stay] *= mus / mut
-        u[stay], v[stay], s[stay] = scatter_step(
-            table, u[stay], v[stay], s[stay], rng.random(stay.size), rng
-        )
-        nsc[stay] += 1
-        low = stay[w[stay] < w_threshold]
-        if low.size:
-            survive = rng.random(low.size) < 1.0 / roulette_m
-            w[low[survive]] *= roulette_m
-            w[low[~survive]] = 0.0
-            alive[low[~survive]] = False
-            side[low[~survive]] = 2
+        new = s_left[idx] <= 0
+        s_left[idx[new]] = -np.log(rng.random(int(new.sum())))
+        step = s_left[idx] / mut if mus > 0 else np.full(idx.size, np.inf)
+        uz = u[idx, 2]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            d_b = np.where(uz < 0, -z[idx] / uz, np.where(uz > 0, (d - z[idx]) / uz, np.inf))
+        hit = d_b <= step
+        dist = np.where(hit, d_b, step)
+        z[idx] = z[idx] + uz * dist
+        if mua > 0:
+            w[idx] *= np.exp(-mua * dist) if mus == 0 else 1.0  # without scattering: Beer-Lambert
+        s_left[idx] = np.where(hit, s_left[idx] - d_b * mut, 0.0)
+        hb = idx[hit]
+        if hb.size:
+            up = u[hb, 2] < 0
+            for sel, n_out, nrm in ((up, n_above, -1.0), (~up, n_below, 1.0)):
+                ids = hb[sel]
+                if ids.size == 0:
+                    continue
+                normal = np.tile([0.0, 0.0, nrm], (ids.size, 1))
+                un, vn, sn, refl = interface(
+                    u[ids],
+                    v[ids],
+                    s[ids],
+                    n_slab,
+                    n_out,
+                    normal,
+                    rng.random(ids.size) if n_slab != n_out else np.ones(ids.size),
+                )
+                u[ids], v[ids], s[ids] = un, vn, sn
+                out = ids[~refl]
+                side[out] = -1 if nrm < 0 else 1
+                alive[out] = False
+        ib = idx[~hit]
+        if ib.size and mus > 0:
+            w[ib] *= mus / mut
+            u[ib], v[ib], s[ib] = scatter_step(table, u[ib], v[ib], s[ib], rng.random(ib.size), rng)
+            nsc[ib] += 1
+            low = ib[w[ib] < w_threshold]
+            if low.size:
+                survive = rng.random(low.size) < 1.0 / roulette_m
+                w[low[survive]] *= roulette_m
+                w[low[~survive]] = 0.0
+                alive[low[~survive]] = False
+                side[low[~survive]] = 2
+        elif ib.size:  # no scattering: absorption only (handled along the path)
+            pass
     leave = (side == -1) | (side == 1)
-    return PolarisedResult(
+    res = PolarisedResult(
         side[leave], u[leave], v[leave], s[leave], w[leave] / packets, nsc[leave], packets
     )
+    res.specular = specular
+    return res
 
 
 def stokes_lab(res: PolarisedResult) -> FloatArray:

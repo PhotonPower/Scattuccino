@@ -20,7 +20,8 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T14 | CUDA-Kern (S5b) gegen den CPU-Kern je Paket (≥ 99,9 % gleiche Entscheidungen), Summen auf 10⁻³ | CPU-Kern | S5 | ○ (Test auf dem Server) |
 | T7a | Polarisation, Streuschritt: Stokes aus Feldern (Mie über S1, S2; Rayleigh über das Dipolfeld) | unabhängige Feldrechnung | S6a | ✅ |
 | T7b | Polarisation im Transport: unpolarisiert = skalar; reine Zustände bleiben rein; Polarisationsgedächtnis (kleine/große Kugeln, linear/zirkular) | skalarer Transport; exakt; MacKintosh et al. (1989) | S6a | ✅ |
-| T7c | Fresnel-Mueller an Brechzahlsprüngen; Benchmarks von Ramella-Roman, Prahl, Jacques | Literatur | S6b | ○ |
+| T7c | Fresnel-Mueller an Brechzahlsprüngen: Fresnel-Rhombus, Brewster, nicht streuende Schicht gegen inkohärente Summe der Wege, Energie | Optik-Lehrbuch; geschlossene Summe | S6b | ✅ |
+| T7d | Benchmarks von Ramella-Roman, Prahl, Jacques (2005) | Literatur (Volltext nötig) | S6 | ○ |
 | T8 | Fluoreszenz | Fluoreszenz-Diffusion | S7 | ○ |
 | T9 | DCS/LSCI | Korrelationsdiffusion | S8 | ○ |
 | T10 | OCT | Einfachstreuung, erweitertes Huygens-Fresnel | S9 | ○ |
@@ -177,3 +178,20 @@ S6b). Python-Referenz; der C++-Kern folgt.
   | x = 10 | 0,93 | 0,03 | +0,33 (Helizität bleibt) |
 
   wie bei MacKintosh et al. (1989): kleine Streuer erhalten lineare, große zirkulare Polarisation.
+
+## T7c: Fresnel an Brechzahlsprüngen, polarisiert (S6b)
+
+`scattuccino.polarisation.interface`: Bezugssystem in die Einfallsebene drehen (p̂ = ŝ × û),
+reflektieren mit der Wahrscheinlichkeit R(S) = ½(|r_p|² + |r_s|²) + ½(|r_p|² − |r_s|²) Q/I,
+Stokes mit den komplexen Fresnel-Amplituden (auch Totalreflexion mit Phase).
+
+- **Fresnel-Rhombus:** zwei Totalreflexionen bei 54,6° in Glas (n = 1,51) machen aus linearem 45°-Licht
+  zirkulares: V = 0,9999999.
+- **Brewster:** spiegelnde Reflexion von unpolarisiertem Licht bei θ_B (n = 1,33) ist rein
+  s-polarisiert: S = (1, −1, 0, 0) auf 10⁻¹².
+- **Nicht streuende Schicht** (n = 1,5, 50°, μa = 0,3/mm, d = 1 mm, linear 45°): Monte Carlo gegen
+  die inkohärente Summe über alle Wege (jeder Weg behält seine p-s-Kohärenz), 2·10⁵ Pakete:
+  T = (0,6299; 0,0705; 0,6240; 0) gegen (0,6303; 0,0706; 0,6245; 0), R_d = (0,0232; −0,0215;
+  −0,0085; 0) gegen (0,0229; −0,0213; −0,0084; 0), alle Komponenten innerhalb 4 σ.
+- **Energie** mit Streuung, zwei Brechzahlsprüngen und schrägem Einfall: 1 auf 10⁻¹²; kein Paket
+  über dem Polarisationsgrad 1.

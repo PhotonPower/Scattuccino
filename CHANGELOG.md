@@ -30,3 +30,5 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   (`scattuccino.tets`); Tests T6b (je Paket gleich dem Voxelgang, Glaskugel gegen geometrische Optik).
 - S6a: polarisierter Transport (`scattuccino.polarisation`: Mueller-Tabellen für Mie und Rayleigh,
   Streuschritt, Schicht/Halbraum mit angepasster Brechzahl, Stokes im Laborsystem); Tests T7a, T7b.
+- S6b: polarisierte Fresnel-Ereignisse an Brechzahlsprüngen (`interface`, `fresnel_amplitudes`), Schicht
+  mit Brechzahlen und schrägem Einfall in `simulate_polarised`; Tests T7c. D7 (FP32-Option) freigegeben.
