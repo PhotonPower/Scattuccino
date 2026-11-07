@@ -24,7 +24,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T7c | Fresnel-Mueller an Brechzahlsprüngen: Fresnel-Rhombus, Brewster, nicht streuende Schicht gegen inkohärente Summe der Wege, Energie | Optik-Lehrbuch; geschlossene Summe | S6b | ✅ |
 | T7e | Polarisation im C++-Kern je Paket gleich der Python-Referenz (angepasst; Brechzahlsprünge, schräg, elliptisch; Rayleigh-Halbraum) | Python-Referenz | S6c | ✅ |
 | T7d | Benchmarks von Ramella-Roman, Prahl, Jacques (2005) | Literatur (Volltext nötig) | S6 | ○ |
-| T8 | Fluoreszenz | Fluoreszenz-Diffusion | S7 | ○ |
+| T8 | Fluoreszenz und Raman: ohne Streuung gegen geschlossene Lösung; Energie der Emission; vorwärts gegen adjungiert (Fluchtfunktion); räumlich versetzte Detektion (SORS) | E₂-Integral; exakt; unabhängige Läufe; Verhalten | S7a | ✅ |
 | T9 | DCS/LSCI | Korrelationsdiffusion | S8 | ○ |
 | T10 | OCT | Einfachstreuung, erweitertes Huygens-Fresnel | S9 | ○ |
 | T11 | Jacobi-Matrizen | finite Differenzen | S10 | ○ |
@@ -281,3 +281,20 @@ elliptisch; Rayleigh-Halbraum mit Brechzahlsprung, zirkular): Austrittsseite, Za
 und Gewicht **bitgleich**; Stokes-Vektoren, Richtungen und Bezugsvektoren gleich bis 2·10⁻¹⁴
 (komplexe Division in libstdc++ gegen NumPy), im angepassten Fall bitgleich. Ein Kern: 5–7-mal
 schneller als die vektorisierte Python-Referenz, mit OpenMP über alle Kerne.
+
+## T8: Fluoreszenz und Raman (S7a)
+
+`scattuccino.fluorescence.simulate_fluorescence`: zweistufig – Anregung mit Absorptionsereignissen
+(Anteil μa,f/μa geht an den Fluorophor), Emission als isotrope innere Quellen
+(`transport.Sources`) mit Quantenausbeute bzw. Raman-Effizienz und den optischen Eigenschaften bei
+λ_m (Re-Absorption inklusive, ohne zweite Emission).
+
+- **Ohne Streuung** (μa,x = 0,8 davon μa,f = 0,3, μa,m = 0,4 /mm, Q = 0,2, n = 1): absorbierter Anteil
+  exakt μa,f/μa,x = 0,375; austretende Fluoreszenz 0,016812 gegen
+  Q ∫ μa,f e^(−μa,x z) ½E₂(μa,m z) dz = 0,016901 (1,3 σ, 2·10⁵ Pakete).
+- **Energie:** emittiert = austretend + re-absorbiert auf 10⁻¹².
+- **Vorwärts gegen adjungiert** (Schicht 2 mm, μs = 10/9 /mm, g = 0,9, n = 1,4): 0,006974 gegen
+  Q Σ A_f(z) E_m(z) = 0,006930 (+0,6 %; Fluchtfunktion aus isotropen Punktquellen in 20 Tiefen).
+- **SORS:** Raman-aktiv nur die obere Schicht (0,5 mm) oder nur die Schicht darunter: Verhältnis
+  tief/oben 0,54 bei 0–0,5 mm Abstand, 3,16 bei 4–6 mm – der tiefe Anteil wächst mit dem Abstand um
+  den Faktor 5,8.
