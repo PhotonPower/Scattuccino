@@ -46,3 +46,5 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Korrelationsdiffusion; Tests T9.
 - S9a: OCT-A-Scans aus dem Protokoll (`scattuccino.oct`: Detektor, Tiefe aus optischem Weg,
   Kohärenz-Gating, exakte Einfach-Rückstreuung); Tests T10a.
+- S9b-2: Zufallsmedium (`scattuccino.microstructure`: Whittle-Matérn, Born, Zufallsfeld, Kalibrierung
+  mit BWPM); Tests T16; Auftrag für die Kalibrierläufe (`docs/agent-server-s9b2.md`).

@@ -20,7 +20,7 @@
 | Fieldtracing | Fokusfelder (OCT, Mikroskopie), Übergang Wellenoptik → Transport |
 | CliffordBem | Phasenfunktionen und Mueller-Matrizen einzelner Streuer (Zellen, Organellen, Partikel), Mie-Querprobe |
 | SpeckleBem | raue Gewebeoberfläche (BRDF), Speckle an der Oberfläche |
-| BWPM | dünne, schwach streuende Proben und die ersten freien Weglängen im Fokus |
+| BWPM | dünne, schwach streuende Proben und die ersten freien Weglängen im Fokus; Zufallsmedium (S9b-2, optional importiert) |
 | hp-FEM | Vorschlag: skalare H1-Löser für Diffusion (Frequenzbereich = komplexe Helmholtz-Gleichung), Akustik (Photoakustik) und Wärme (Lasertherapie) |
 | BioOptoMD | Brechzahl- und Absorptionsprofile molekularer Schichten (Datenport N) |
 | BindOptiX (PhotoKinX) | Kopplung an Mikrofluidik und thermo-optische Effekte bei Biosensoren (prüfen) |
