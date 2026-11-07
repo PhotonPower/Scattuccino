@@ -15,3 +15,4 @@ prüfen).
 | boas1997 | D. A. Boas, A. G. Yodh, J. Opt. Soc. Am. A 14 (1997) | Z | S8 |
 | thrane2000 | L. Thrane, H. T. Yura, P. E. Andersen, J. Opt. Soc. Am. A 17 (2000) | Z | S9 |
 | bohren1983 | C. F. Bohren, D. R. Huffman, Absorption and Scattering of Light by Small Particles (1983) | Z | S3 Mie |
+| chandrasekhar1960 | S. Chandrasekhar, Radiative Transfer, Dover (1960), Kap. V (H-Funktion, Reflexion des halbunendlichen Mediums) | Z | S1 Referenz T1b |
