@@ -17,6 +17,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T6a | Voxel: Verfeinerung und Stapelgröße ändern nichts (zählerbasierter Zufall je Paket); eine und zwei Schichten mit Brechzahlsprüngen und schrägem Einfall; offene Ränder; Einschluss | exakt; Adding-Doubling; Schichttransport; Energie | S4a | ✅ |
 | T6b | Tetraedernetz = Schichten, gekrümmte Grenzen | T1, Kugel/Zylinder | S4b | ○ |
 | T13 | C++-Kern (S5a) gegen die Python-Referenz, je Paket: Zufallszahlen, Phasenfunktionen, Austrittsseite, Gewicht, Zahl der Streuungen bitgleich; Orte, Richtungen, Wege bis auf gesammelte letzte Bits (≤ 7e−13); Threads ändern nichts | Python-Referenz | S5 | ✅ |
+| T14 | CUDA-Kern (S5b) gegen den CPU-Kern je Paket (≥ 99,9 % gleiche Entscheidungen), Summen auf 10⁻³; ohne Protokoll/Voxelwertung gleich (S5c) | CPU-Kern | S5 | ✅ S5b und S5c auf dem Server (2026-11-07) |
 | T7 | Polarisation | Ramella-Roman, Prahl, Jacques (2005) | S6 | ○ |
 | T8 | Fluoreszenz | Fluoreszenz-Diffusion | S7 | ○ |
 | T9 | DCS/LSCI | Korrelationsdiffusion | S8 | ○ |
@@ -135,3 +136,31 @@ Reihenfolge der Ziehungen je Paket. Fassade `scattuccino.fast.simulate_voxels(�
 - Laufzeit (ein Kern): Würfel 21³ mit Einschluss, 2·10⁴ Pakete: Python 0,52 s, C++ 0,06 s
   (Faktor 9); schwach absorbierende Schicht (μa = 0,01/mm, μs = 10/mm, 20 mm), 2·10⁵ Pakete: 13 s
   (NumPy-Schichtcode: 80 s); mit OpenMP auf allen Kernen entsprechend schneller.
+
+## T14: CUDA-Kern auf dem Server (S5b, 2026-11-07)
+
+RTX 6000 Ada, Treiber 590.48, nvcc 12.9 (HPC SDK 25.5), 32 CPU-Kerne, Python 3.13. Build: gcc 14
+als nvcc-Host-Compiler, gcc-toolset-15 für C++ und Linken, statische libstdc++. `core_cuda.cu`
+übersetzte ohne Änderung; alle Tests grün (50 + 11 mit CUDA). R in CPU und CUDA identisch.
+
+| Fall (10⁷ Pakete) | CPU, 32 Kerne | CUDA (S5b) | R |
+| --- | --- | --- | --- |
+| Würfel 101³, μa = 0,05, μs = 10 /mm | 26,4 s | 33,4 s | 0,220912 |
+| schwach absorbierend, μa = 0,01 /mm | 171,4 s | 339,6 s | 0,603645 |
+
+**Befund:** Die GPU war langsamer als 32 CPU-Kerne. Ursachen: (1) jede Wechselwirkung addierte
+atomar auf die Absorption eines einzigen Materials – alle Threads auf dieselbe Adresse; (2) Pakete
+leben sehr verschieden lang, Warps warten auf das langsamste; (3) alles in FP64, das die
+RTX 6000 Ada nur mit 1/64 des FP32-Durchsatzes rechnet. S5c behebt (1) und (2) ohne die
+Physik zu ändern; (3) wäre ein FP32-Modus und ändert die Gleichheit mit der CPU (Entscheidung D7).
+
+**S5c auf dem Server** (Commit 4deed63, 10⁷ Pakete; Tests grün, R zwischen CPU und CUDA auf 10⁻¹³):
+
+| Fall | CPU, 32 Kerne | CUDA S5b | CUDA S5c, Protokoll | CUDA S5c, nur Summen |
+| --- | --- | --- | --- | --- |
+| Würfel 101³ | 25,4–26,4 s | 33,4 s | 17,3 s | 13,3 s |
+| schwach absorbierend | 169,6–170,5 s | 339,6 s | 92,0 s | 62,9 s |
+
+Lokale Akkumulation und persistente Threads machen die GPU 2,5- bzw. 5,4-mal schneller als in S5b
+und 1,9- bzw. 2,7-mal schneller als 32 CPU-Kerne. Der verbleibende Engpass ist FP64 (1/64 des
+FP32-Durchsatzes der RTX 6000 Ada) → FP32-Option (D7).

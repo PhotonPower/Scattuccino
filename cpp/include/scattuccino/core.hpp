@@ -44,11 +44,13 @@ struct VoxelInput {
   std::int64_t packets = 0;
   double w_threshold = 1e-4, roulette_m = 10.0;
   bool record = true;  // protocol of the leaving packets
+  bool score_voxels = true;  // absorbed power per voxel (the GPU skips the atomics if false)
   int threads = 1;
 };
 
 struct VoxelOutput {
   double r_specular = 0.0;
+  double sum_r = 0.0, sum_r2 = 0.0, sum_t = 0.0, sum_t2 = 0.0, sum_side = 0.0;  // exit weights
   std::vector<double> absorbed;         // per material, summed weight (not divided by packets)
   std::vector<double> absorbed_voxels;  // per voxel
   // protocol of leaving packets, in packet order
@@ -59,6 +61,18 @@ struct VoxelOutput {
   std::vector<std::int64_t> scatterings;
 };
 
+// Derived launch quantities (entry voxel, refracted direction, specular reflection).
+struct Setup {
+  double lo[2] = {0.0, 0.0};
+  int i0 = 0, j0 = 0;
+  double r_specular = 0.0, sin_t0 = 0.0, cos_t0 = 1.0;
+};
+Setup prepare(const VoxelInput& in);
+
 VoxelOutput simulate_voxels(const VoxelInput& in);
+
+// CUDA backend (stage S5b), available if built with SCATTUCCINO_ENABLE_CUDA.
+int cuda_device_count();
+VoxelOutput simulate_voxels_cuda(const VoxelInput& in, int device);
 
 }  // namespace scattuccino
