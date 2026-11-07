@@ -89,7 +89,7 @@ def simulate_voxels(
     absorbed = np.zeros(nm)
     avox = np.zeros(lab.shape)
     out: dict[str, list[FloatArray]] = {
-        k: [] for k in ("side", "x", "y", "ux", "uy", "uz", "w", "path", "nsc", "zmax")
+        k: [] for k in ("side", "x", "y", "ux", "uy", "uz", "w", "path", "nsc", "zmax", "id")
     }
     done = 0
     while done < packets:
@@ -196,6 +196,7 @@ def simulate_voxels(
                             ("path", path[ids]),
                             ("nsc", nsc[ids].astype(np.float64)),
                             ("zmax", zmax[ids]),
+                            ("id", gid[ids].astype(np.float64)),
                         ):
                             out[key].append(np.asarray(val))
                         alive[ids] = False
@@ -243,5 +244,6 @@ def simulate_voxels(
         n_mat,
         packets,
         mua.copy(),
+        cat["id"].astype(np.int64),
     )
     return VoxelSimulation(medium, r_sp, proto, absorbed / packets, avox / packets, seed)

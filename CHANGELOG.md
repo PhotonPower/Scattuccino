@@ -21,3 +21,5 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   T4, T5.
 - S4a: Voxelgeometrie (`scattuccino.voxels`) mit zählerbasierten Zufallszahlen je Paket
   (`scattuccino.random`); Tests T6a.
+- S5a: C++-Kern (`scattuccino._core`, scikit-build-core, pybind11, OpenMP) für den Voxeltransport,
+  je Paket gleich der Python-Referenz; Fassade `scattuccino.fast`; CI baut den Kern, Job ohne Kern.

@@ -10,10 +10,12 @@ Scattuccino simuliert die Lichtausbreitung in Gewebe und Gewebephantomen für al
 ## Bauen und testen
 
 ```bash
-pip install -r requirements-dev.txt && pip install -e .
+pip install -r requirements-dev.txt && pip install -e .   # baut auch den C++-Kern scattuccino._core
 pytest
 ruff check . && ruff format --check . && mypy
 ```
+
+Ohne Compiler: `pip install -e . -C cmake.define.SCATTUCCINO_BUILD_CORE=OFF` (nur Python-Referenz).
 
 ## Arbeitsregeln
 

@@ -16,6 +16,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T5 | Phasenfunktionen (HG, MHG, Gegenbauer, tabelliert, Mie): Normierung, Momente der Stichproben, geschlossene Formen; Mie-Grenzfälle; Monte Carlo gegen Adding-Doubling je Phasenfunktion | analytisch, Rayleigh, Extinktionsparadoxon, Adding-Doubling | S3 | ✅ (Querprobe CliffordBem offen) |
 | T6a | Voxel: Verfeinerung und Stapelgröße ändern nichts (zählerbasierter Zufall je Paket); eine und zwei Schichten mit Brechzahlsprüngen und schrägem Einfall; offene Ränder; Einschluss | exakt; Adding-Doubling; Schichttransport; Energie | S4a | ✅ |
 | T6b | Tetraedernetz = Schichten, gekrümmte Grenzen | T1, Kugel/Zylinder | S4b | ○ |
+| T13 | C++-Kern (S5a) gegen die Python-Referenz, je Paket: Zufallszahlen, Phasenfunktionen, Austrittsseite, Gewicht, Zahl der Streuungen bitgleich; Orte, Richtungen, Wege bis auf gesammelte letzte Bits (≤ 7e−13); Threads ändern nichts | Python-Referenz | S5 | ✅ |
 | T7 | Polarisation | Ramella-Roman, Prahl, Jacques (2005) | S6 | ○ |
 | T8 | Fluoreszenz | Fluoreszenz-Diffusion | S7 | ○ |
 | T9 | DCS/LSCI | Korrelationsdiffusion | S8 | ○ |
@@ -119,3 +120,18 @@ k ab). Flächen zwischen gleichen Brechzahlen verbrauchen keine Zufallszahl.
 - **Offene Ränder und Einschluss:** Würfel 2,1 mm, absorbierende Kugel (r = 0,3 mm, μa = 2/mm,
   „Gefäß“) 0,65 mm unter dem Eintrittspunkt: R sinkt von 0,092 auf 0,057, die Kugel absorbiert 41 %;
   Energiebilanz mit seitlichen Verlusten auf 10⁻⁴.
+
+## T13: C++-Kern (S5a)
+
+`cpp/src/core.cpp` (C++20, OpenMP über Pakete, `-ffp-contract=off`) spiegelt
+`scattuccino.voxels` Zeile für Zeile, mit denselben zählerbasierten Zufallszahlen und derselben
+Reihenfolge der Ziehungen je Paket. Fassade `scattuccino.fast.simulate_voxels(…, backend=…)`.
+
+- Zwei Medien (offener Würfel mit MHG-Einschluss; zwei Schichten mit Mie- und Gegenbauer-
+  Phasenfunktion, Brechzahlsprüngen, schrägem Einfall), je 10⁴ Pakete: **jede** Entscheidung
+  gleich – Austrittsseite, Gewicht und Zahl der Streuungen bitgleich; Orte, Richtungen und Wege
+  weichen nur in den letzten Bits ab (cbrt/pow/log von libm gegen NumPy, gesammelt bis 7·10⁻¹³).
+- Threads (1 gegen 4) ändern nichts.
+- Laufzeit (ein Kern): Würfel 21³ mit Einschluss, 2·10⁴ Pakete: Python 0,52 s, C++ 0,06 s
+  (Faktor 9); schwach absorbierende Schicht (μa = 0,01/mm, μs = 10/mm, 20 mm), 2·10⁵ Pakete: 13 s
+  (NumPy-Schichtcode: 80 s); mit OpenMP auf allen Kernen entsprechend schneller.

@@ -23,3 +23,17 @@ jobs:
       - run: ruff check . && ruff format --check .
       - run: mypy
       - run: pytest -q
+        env:
+          SCATTUCCINO_REQUIRE_CORE: "1"
+
+  pure:
+    name: pytest without the C++ core
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt && pip install -e . -C cmake.define.SCATTUCCINO_BUILD_CORE=OFF
+      - run: pytest -q

@@ -45,6 +45,7 @@ class Protocol:
     n_layer: FloatArray  # refractive index per layer (for times of flight)
     packets: int
     mua_used: FloatArray  # μa per layer applied in the weights ("mbl": inside `weight`)
+    packet: IntArray | None = None  # packet number of each exit (voxel transport, S4/S5)
 
     @property
     def total_path(self) -> FloatArray:
