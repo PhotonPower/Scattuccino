@@ -71,6 +71,18 @@ class Grid:
 
 
 @dataclass
+class Sources:
+    """Isotropic point sources inside the medium (S7: fluorescence, Raman): positions (mm),
+    layer index and weight (power) per packet. Replaces the incident beam."""
+
+    x: FloatArray
+    y: FloatArray
+    z: FloatArray
+    layer: IntArray
+    weight: FloatArray
+
+
+@dataclass
 class Simulation:
     stack: Stack
     r_specular: float
@@ -79,6 +91,7 @@ class Simulation:
     absorbed_grid: FloatArray | None  # (nr, nz), per incident power
     grid: Grid | None
     seed: int
+    events: dict[str, FloatArray] | None = None  # absorption events (S7): x, y, z, layer, dw
 
     def fluence(self) -> FloatArray:
         """Φ(r, z) per incident power (1/mm²) from the absorbed grid: A/(μa · V)."""
@@ -109,9 +122,16 @@ def simulate(
     w_threshold: float = 1e-4,
     roulette_m: float = 10.0,
     batch: int = 100_000,
+    sources: Sources | None = None,
+    record_absorption: bool = False,
 ) -> Simulation:
     """Monte Carlo with protocol (see module docstring). max_path ends packets whose path exceeds it
-    (their weight is lost; use only where its share is negligible)."""
+    (their weight is lost; use only where its share is negligible).
+
+    sources (S7): isotropic packets from points inside the medium instead of the incident beam
+    (`packets` must equal their number; weights are taken as given, not divided). With
+    record_absorption the absorption events (position, layer, absorbed weight per incident power)
+    of the implicit scheme are returned in `Simulation.events`."""
     if absorption not in ("implicit", "mbl"):
         raise ValueError("absorption must be 'implicit' or 'mbl'")
     mbl = absorption == "mbl"
@@ -131,14 +151,38 @@ def simulate(
     }
     absorbed = np.zeros(nl)
     agrid = np.zeros((grid.nr, grid.nz)) if grid else None
+    ev: dict[str, list[FloatArray]] = {k: [] for k in ("x", "y", "z", "layer", "dw")}
+    if sources is not None:
+        if len(sources.x) != packets:
+            raise ValueError("packets must equal the number of sources")
+        if mbl:
+            raise ValueError("internal sources are implemented for the implicit scheme")
+        r_sp = 0.0
     done = 0
     while done < packets:
         m = min(batch, packets - done)
         done += m
-        x, y, z = np.zeros(m), np.zeros(m), np.zeros(m)
-        ux, uy, uz = np.full(m, sin_t0), np.zeros(m), np.full(m, float(cos_t0[0]))
-        w = np.full(m, 1.0 - r_sp)
-        layer = np.zeros(m, dtype=np.int64)
+        x: FloatArray = np.zeros(m)
+        y: FloatArray = np.zeros(m)
+        z: FloatArray = np.zeros(m)
+        ux: FloatArray = np.full(m, sin_t0)
+        uy: FloatArray = np.zeros(m)
+        uz: FloatArray = np.full(m, float(cos_t0[0]))
+        w: FloatArray = np.full(m, 1.0 - r_sp)
+        layer: IntArray = np.zeros(m, dtype=np.int64)
+        if sources is not None:
+            sl = slice(done - m, done)
+            x, y, z = (
+                sources.x[sl].astype(np.float64),
+                sources.y[sl].astype(np.float64),
+                sources.z[sl].astype(np.float64),
+            )
+            layer = sources.layer[sl].astype(np.int64)
+            w = sources.weight[sl].astype(np.float64) * packets  # undone by the final division
+            cz = 2 * rng.random(m) - 1
+            ph = 2 * np.pi * rng.random(m)
+            sz = np.sqrt(1 - cz * cz)
+            ux, uy, uz = sz * np.cos(ph), sz * np.sin(ph), cz
         alive = np.ones(m, dtype=bool)
         path = np.zeros((m, nl))
         nsc = np.zeros(m, dtype=np.int64)
@@ -258,6 +302,15 @@ def simulate(
                         mut[lb] > 0, mua[lb] / np.where(mut[lb] > 0, mut[lb], 1.0), 0.0
                     )
                     deposit(dw, z[ib], lb, x[ib], y[ib])
+                    if record_absorption:
+                        for key, val in (
+                            ("x", x[ib]),
+                            ("y", y[ib]),
+                            ("z", z[ib]),
+                            ("layer", lb.astype(np.float64)),
+                            ("dw", dw),
+                        ):
+                            ev[key].append(np.asarray(val, dtype=np.float64))
                     w[ib] -= dw
                 xi_s = rng.random(ib.size)
                 ct = np.empty(ib.size)
@@ -298,6 +351,10 @@ def simulate(
         packets,
         mua.copy(),
     )
+    events = None
+    if record_absorption:
+        events = {k: (np.concatenate(v) if v else np.zeros(0)) for k, v in ev.items()}
+        events["dw"] = events["dw"] / packets
     return Simulation(
         stack,
         r_sp,
@@ -306,6 +363,7 @@ def simulate(
         agrid / packets if agrid is not None else None,
         grid,
         seed,
+        events,
     )
 
 
