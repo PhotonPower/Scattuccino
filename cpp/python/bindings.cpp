@@ -63,13 +63,13 @@ PYBIND11_MODULE(_core, m) {
     for (auto& x : v) x = r.uniform();
     return arr(v);
   });
-  m.def("simulate_voxels", [](const VoxelInput& in) {
-    VoxelOutput o;
-    {
-      py::gil_scoped_release release;
-      o = simulate_voxels(in);
-    }
+  auto to_dict = [](const VoxelOutput& o) {
     py::dict d;
+    d["sum_r"] = o.sum_r;
+    d["sum_r2"] = o.sum_r2;
+    d["sum_t"] = o.sum_t;
+    d["sum_t2"] = o.sum_t2;
+    d["sum_side"] = o.sum_side;
     d["r_specular"] = o.r_specular;
     d["absorbed"] = arr(o.absorbed);
     d["absorbed_voxels"] = arr(o.absorbed_voxels);
@@ -85,5 +85,28 @@ PYBIND11_MODULE(_core, m) {
     d["path"] = arr(o.path);
     d["scatterings"] = arr(o.scatterings);
     return d;
+  };
+  m.def("simulate_voxels", [to_dict](const VoxelInput& in) {
+    VoxelOutput o;
+    {
+      py::gil_scoped_release release;
+      o = simulate_voxels(in);
+    }
+    return to_dict(o);
   });
+#ifdef SCATTUCCINO_HAVE_CUDA
+  m.attr("HAS_CUDA") = true;
+  m.def("cuda_device_count", &cuda_device_count);
+  m.def("simulate_voxels_cuda", [to_dict](const VoxelInput& in, int device) {
+    VoxelOutput o;
+    {
+      py::gil_scoped_release release;
+      o = simulate_voxels_cuda(in, device);
+    }
+    return to_dict(o);
+  }, py::arg("input"), py::arg("device") = 0);
+#else
+  m.attr("HAS_CUDA") = false;
+  m.def("cuda_device_count", []() { return 0; });
+#endif
 }

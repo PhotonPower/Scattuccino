@@ -1,6 +1,6 @@
 """Facade for the C++ core (stage S5): same inputs and results as the Python reference.
 
-`simulate_voxels(medium, packets, …, backend="auto"|"python"|"cpu")` returns a
+`simulate_voxels(medium, packets, …, backend="auto"|"python"|"cpu"|"cuda")` returns a
 `scattuccino.voxels.VoxelSimulation`; with the core the packets run in parallel (OpenMP) and the
 protocol is sorted by packet number (the Python reference records in exit order; compare by
 `protocol.packet`).
@@ -25,6 +25,11 @@ try:
 except ImportError:
     _core = None
     CORE_AVAILABLE = False
+
+
+def cuda_available() -> bool:
+    """True if the core was built with SCATTUCCINO_ENABLE_CUDA=ON and a GPU is present."""
+    return bool(_core is not None and _core.HAS_CUDA and _core.cuda_device_count() > 0)
 
 
 def _phase(ph: PhaseFunction) -> Any:
@@ -53,7 +58,11 @@ def simulate_voxels(
     roulette_m: float = 10.0,
     backend: str = "auto",
     threads: int | None = None,
+    device: int = 0,
 ) -> VoxelSimulation:
+    """backend: "python", "cpu", "cuda" or "auto" (CUDA if available, else CPU, else Python)."""
+    if backend not in ("auto", "python", "cpu", "cuda"):
+        raise ValueError("backend must be 'auto', 'python', 'cpu' or 'cuda'")
     if backend == "python" or (backend == "auto" and _core is None):
         return _python_voxels(medium, packets, seed, cos_incident, w_threshold, roulette_m)
     if _core is None:
@@ -75,7 +84,13 @@ def simulate_voxels(
     inp.cos_incident, inp.seed, inp.packets = cos_incident, seed, packets
     inp.w_threshold, inp.roulette_m = w_threshold, roulette_m
     inp.threads = threads if threads and threads > 0 else (os.cpu_count() or 1)
-    out = _core.simulate_voxels(inp)
+    use_cuda = backend == "cuda" or (backend == "auto" and cuda_available())
+    if use_cuda:
+        if not cuda_available():
+            raise RuntimeError("CUDA backend requested but not built or no GPU present")
+        out = _core.simulate_voxels_cuda(inp, device)
+    else:
+        out = _core.simulate_voxels(inp)
     order = np.argsort(out["id"], kind="stable")
     nm = len(medium.materials)
     path = np.asarray(out["path"]).reshape(-1, nm)[order]
