@@ -48,12 +48,15 @@ constexpr int kLocalMaterials = 16;  // per-thread accumulators; more materials 
 // Persistent threads: every thread takes the next packet from a global counter until all are
 // done (no idle warps at the end of a launch with long-lived packets). Absorption per material is
 // summed in registers and flushed once per packet; the voxel grid is scored only on request.
-__global__ void k_trace(photon::Geometry geo, std::uint64_t seed, long long first, long long count,
+template <class Real, class Pos>
+__global__ void k_trace(photon::Geometry<Real> geo, std::uint64_t seed, long long first, long long count,
                         unsigned long long* next, double sin_t0, double cos_t0, double w0, int i0,
                         int j0, int nm, bool score_voxels, double* absorbed, double* absorbed_voxels,
-                        double* sums, bool record, DeviceExit* exits, double* paths) {
+                        double* sums, unsigned long long* counts, bool record, DeviceExit* exits,
+                        double* paths) {
   double acc[kLocalMaterials];
   double s_r = 0.0, s_r2 = 0.0, s_t = 0.0, s_t2 = 0.0, s_side = 0.0;
+  unsigned long long n_exit = 0, n_roulette = 0;
   while (true) {
     const long long t = static_cast<long long>(atomicAdd(next, 1ULL));
     if (t >= count) break;
@@ -67,10 +70,11 @@ __global__ void k_trace(photon::Geometry geo, std::uint64_t seed, long long firs
     auto add_path = [&](int mat, double d) {
       if (my_path) my_path[mat] += d;
     };
-    const photon::Exit e = photon::trace(geo, seed, static_cast<std::uint64_t>(id), sin_t0, cos_t0, w0, i0,
+    const photon::Exit e = photon::trace<Real, Pos>(geo, seed, static_cast<std::uint64_t>(id), sin_t0, cos_t0, w0, i0,
                                          j0, deposit, add_path);
     for (int k = 0; k < kLocalMaterials && k < nm; ++k)
       if (acc[k] != 0.0) atomicAdd(&absorbed[k], acc[k]);
+    if (e.side == 2) ++n_roulette; else ++n_exit;
     if (e.side == -1) { s_r += e.w; s_r2 += e.w * e.w; }
     if (e.side == 1) { s_t += e.w; s_t2 += e.w * e.w; }
     if (e.side == 0) s_side += e.w;
@@ -81,6 +85,8 @@ __global__ void k_trace(photon::Geometry geo, std::uint64_t seed, long long firs
   atomicAdd(&sums[2], s_t);
   atomicAdd(&sums[3], s_t2);
   atomicAdd(&sums[4], s_side);
+  atomicAdd(&counts[0], n_exit);
+  atomicAdd(&counts[1], n_roulette);
 }
 
 }  // namespace
@@ -94,7 +100,10 @@ int cuda_device_count() {
   return n;
 }
 
-VoxelOutput simulate_voxels_cuda(const VoxelInput& in, int device) {
+namespace {
+
+template <class Real, class Pos>
+VoxelOutput run_cuda(const VoxelInput& in, int device) {
   check(cudaSetDevice(device), "cudaSetDevice");
   const Setup st = prepare(in);
   const std::size_t nm = in.materials.size();
@@ -102,20 +111,26 @@ VoxelOutput simulate_voxels_cuda(const VoxelInput& in, int device) {
   // device copies: labels, tabulated phase arrays, materials
   Buffer<std::int32_t> d_labels(nvox);
   d_labels.upload(in.labels.data());
-  std::vector<photon::MaterialView> mats(nm);
-  std::vector<std::unique_ptr<Buffer<double>>> tables;
+  std::vector<photon::MaterialView<Real>> mats(nm);
+  std::vector<std::unique_ptr<Buffer<Real>>> tables;
   for (std::size_t m = 0; m < nm; ++m) {
     const Material& M = in.materials[m];
-    photon::MaterialView mv{M.mua, M.mus, M.n, {}};
+    photon::MaterialView<Real> mv{};
+    mv.mua = static_cast<Real>(M.mua);
+    mv.mus = static_cast<Real>(M.mus);
+    mv.n = static_cast<Real>(M.n);
+    const double mt = M.mua + M.mus;
+    mv.absfrac = mt > 0 ? M.mua / mt : 0.0;
     mv.phase.kind = static_cast<int>(M.phase.kind);
-    mv.phase.p1 = M.phase.p1;
-    mv.phase.p2 = M.phase.p2;
+    mv.phase.p1 = static_cast<Real>(M.phase.p1);
+    mv.phase.p2 = static_cast<Real>(M.phase.p2);
     if (M.phase.kind == PhaseKind::Tabulated) {
       const std::vector<double>* arrays[3] = {&M.phase.mu, &M.phase.p, &M.phase.cdf};
-      const double* ptrs[3];
+      const Real* ptrs[3];
       for (int a = 0; a < 3; ++a) {
-        tables.push_back(std::make_unique<Buffer<double>>(arrays[a]->size()));
-        tables.back()->upload(arrays[a]->data());
+        const std::vector<Real> conv(arrays[a]->begin(), arrays[a]->end());
+        tables.push_back(std::make_unique<Buffer<Real>>(conv.size()));
+        tables.back()->upload(conv.data());
         ptrs[a] = tables.back()->ptr;
       }
       mv.phase.mu = ptrs[0];
@@ -125,18 +140,22 @@ VoxelOutput simulate_voxels_cuda(const VoxelInput& in, int device) {
     }
     mats[m] = mv;
   }
-  Buffer<photon::MaterialView> d_mats(nm);
+  Buffer<photon::MaterialView<Real>> d_mats(nm);
   d_mats.upload(mats.data());
-  photon::Geometry geo{in.nx, in.ny, in.nz, {in.dx, in.dy, in.dz}, {st.lo[0], st.lo[1], 0.0},
-                       d_labels.ptr, d_mats.ptr, in.n_above, in.n_below, in.periodic,
-                       in.w_threshold, in.roulette_m};
+  photon::Geometry<Real> geo{in.nx, in.ny, in.nz,
+                             {static_cast<Real>(in.dx), static_cast<Real>(in.dy), static_cast<Real>(in.dz)},
+                             {static_cast<Real>(st.lo[0]), static_cast<Real>(st.lo[1]), 0},
+                             d_labels.ptr, d_mats.ptr,
+                             static_cast<Real>(in.n_above), static_cast<Real>(in.n_below),
+                             in.periodic, in.w_threshold, in.roulette_m};
   Buffer<double> d_abs(nm), d_vox(nvox), d_sums(5);
-  Buffer<unsigned long long> d_next(1);
+  Buffer<unsigned long long> d_next(1), d_counts(2);
   int sms = 0;
   check(cudaDeviceGetAttribute(&sms, cudaDevAttrMultiProcessorCount, device), "attribute");
   d_abs.zero();
   d_vox.zero();
   d_sums.zero();
+  d_counts.zero();
   VoxelOutput out;
   out.r_specular = st.r_specular;
   const long long chunk = in.record ? 1 << 20 : 1 << 24;  // packets per launch
@@ -155,9 +174,9 @@ VoxelOutput simulate_voxels_cuda(const VoxelInput& in, int device) {
     const int block = 128;
     const long long wanted = (count + block - 1) / block;
     const unsigned grid = static_cast<unsigned>(std::min<long long>(wanted, static_cast<long long>(sms) * 16));
-    k_trace<<<grid, block>>>(geo, in.seed, first, count, d_next.ptr, st.sin_t0, st.cos_t0, 1.0 - st.r_specular,
+    k_trace<Real, Pos><<<grid, block>>>(geo, in.seed, first, count, d_next.ptr, st.sin_t0, st.cos_t0, 1.0 - st.r_specular,
                              st.i0, st.j0, static_cast<int>(nm), in.score_voxels, d_abs.ptr, d_vox.ptr,
-                             d_sums.ptr, in.record, in.record ? d_exits->ptr : nullptr,
+                             d_sums.ptr, d_counts.ptr, in.record, in.record ? d_exits->ptr : nullptr,
                              in.record ? d_paths->ptr : nullptr);
     check(cudaGetLastError(), "k_trace");
     check(cudaDeviceSynchronize(), "synchronize");
@@ -197,7 +216,26 @@ VoxelOutput simulate_voxels_cuda(const VoxelInput& in, int device) {
   out.sum_t = sums[2];
   out.sum_t2 = sums[3];
   out.sum_side = sums[4];
+  unsigned long long counts[2];
+  d_counts.download(counts);
+  out.n_exit = static_cast<std::int64_t>(counts[0]);
+  out.n_roulette = static_cast<std::int64_t>(counts[1]);
   return out;
+}
+
+}  // namespace
+
+VoxelOutput simulate_voxels_cuda(const VoxelInput& in, int device) {
+  switch (in.precision) {
+    case 0:
+      return run_cuda<double, double>(in, device);
+    case 1:
+      return run_cuda<float, float>(in, device);
+    case 2:
+      return run_cuda<float, double>(in, device);
+    default:
+      throw std::invalid_argument("precision must be 0 (double), 1 or 2 (single)");
+  }
 }
 
 }  // namespace scattuccino

@@ -22,7 +22,7 @@ double CounterRandom::uniform() {
 }
 
 double Phase::sample(double xi) const {
-  photon::PhaseView v;
+  photon::PhaseView<double> v;
   v.kind = static_cast<int>(kind);
   v.p1 = p1;
   v.p2 = p2;
@@ -34,21 +34,34 @@ double Phase::sample(double xi) const {
 }
 
 namespace {
-// plain views of the input for photon::trace (host memory)
+// plain views of the input for photon::trace (host memory), in the precision of the run
+template <class Real>
 struct Views {
-  std::vector<photon::MaterialView> materials;
+  std::vector<photon::MaterialView<Real>> materials;
+  std::vector<std::vector<Real>> store;  // converted tables of the tabulated phase functions
 };
 
-Views make_views(const VoxelInput& in) {
-  Views v;
+template <class Real>
+Views<Real> make_views(const VoxelInput& in) {
+  Views<Real> v;
+  v.store.reserve(3 * in.materials.size());
+  auto table = [&v](const std::vector<double>& src) -> const Real* {
+    v.store.emplace_back(src.begin(), src.end());
+    return v.store.back().data();
+  };
   for (const auto& m : in.materials) {
-    photon::MaterialView mv{m.mua, m.mus, m.n, {}};
+    photon::MaterialView<Real> mv{};
+    mv.mua = static_cast<Real>(m.mua);
+    mv.mus = static_cast<Real>(m.mus);
+    mv.n = static_cast<Real>(m.n);
+    const double mt = m.mua + m.mus;
+    mv.absfrac = mt > 0 ? m.mua / mt : 0.0;
     mv.phase.kind = static_cast<int>(m.phase.kind);
-    mv.phase.p1 = m.phase.p1;
-    mv.phase.p2 = m.phase.p2;
-    mv.phase.mu = m.phase.mu.data();
-    mv.phase.p = m.phase.p.data();
-    mv.phase.cdf = m.phase.cdf.data();
+    mv.phase.p1 = static_cast<Real>(m.phase.p1);
+    mv.phase.p2 = static_cast<Real>(m.phase.p2);
+    mv.phase.mu = table(m.phase.mu);
+    mv.phase.p = table(m.phase.p);
+    mv.phase.cdf = table(m.phase.cdf);
     mv.phase.n = static_cast<int>(m.phase.mu.size());
     v.materials.push_back(mv);
   }
@@ -81,14 +94,19 @@ Setup prepare(const VoxelInput& in) {
   return s;
 }
 
-VoxelOutput simulate_voxels(const VoxelInput& in) {
+namespace {
+template <class Real, class Pos>
+VoxelOutput run(const VoxelInput& in) {
   const Setup st = prepare(in);
-  const Views views = make_views(in);
+  const Views<Real> views = make_views<Real>(in);
   const std::size_t nm = in.materials.size();
   const std::size_t nvox = static_cast<std::size_t>(in.nx) * in.ny * in.nz;
-  photon::Geometry geo{in.nx, in.ny, in.nz, {in.dx, in.dy, in.dz}, {st.lo[0], st.lo[1], 0.0},
-                       in.labels.data(), views.materials.data(), in.n_above, in.n_below,
-                       in.periodic, in.w_threshold, in.roulette_m};
+  photon::Geometry<Real> geo{in.nx, in.ny, in.nz,
+                             {static_cast<Real>(in.dx), static_cast<Real>(in.dy), static_cast<Real>(in.dz)},
+                             {static_cast<Real>(st.lo[0]), static_cast<Real>(st.lo[1]), 0},
+                             in.labels.data(), views.materials.data(),
+                             static_cast<Real>(in.n_above), static_cast<Real>(in.n_below),
+                             in.periodic, in.w_threshold, in.roulette_m};
   VoxelOutput out;
   out.r_specular = st.r_specular;
   out.absorbed.assign(nm, 0.0);
@@ -109,9 +127,13 @@ VoxelOutput simulate_voxels(const VoxelInput& in) {
         o.absorbed_voxels[(static_cast<std::size_t>(i) * in.ny + j) * in.nz + k] += dw;
       };
       auto add_path = [&](int mat, double d) { path[static_cast<std::size_t>(mat)] += d; };
-      const photon::Exit e = photon::trace(geo, in.seed, static_cast<std::uint64_t>(id), st.sin_t0,
+      const photon::Exit e = photon::trace<Real, Pos>(geo, in.seed, static_cast<std::uint64_t>(id), st.sin_t0,
                                            st.cos_t0, 1.0 - st.r_specular, st.i0, st.j0, deposit, add_path);
-      if (e.side == 2) continue;  // roulette
+      if (e.side == 2) {  // roulette
+        ++o.n_roulette;
+        continue;
+      }
+      ++o.n_exit;
       const double w2 = e.w * e.w;
       if (e.side == -1) o.sum_r += e.w, o.sum_r2 += w2;
       if (e.side == 1) o.sum_t += e.w, o.sum_t2 += w2;
@@ -134,6 +156,8 @@ VoxelOutput simulate_voxels(const VoxelInput& in) {
   for (const auto& o : parts) {
     for (std::size_t k = 0; k < nm; ++k) out.absorbed[k] += o.absorbed[k];
     for (std::size_t k = 0; k < nvox; ++k) out.absorbed_voxels[k] += o.absorbed_voxels[k];
+    out.n_exit += o.n_exit;
+    out.n_roulette += o.n_roulette;
     out.sum_r += o.sum_r;
     out.sum_r2 += o.sum_r2;
     out.sum_t += o.sum_t;
@@ -152,6 +176,21 @@ VoxelOutput simulate_voxels(const VoxelInput& in) {
     out.scatterings.insert(out.scatterings.end(), o.scatterings.begin(), o.scatterings.end());
   }
   return out;
+}
+
+}  // namespace
+
+VoxelOutput simulate_voxels(const VoxelInput& in) {
+  switch (in.precision) {
+    case 0:
+      return run<double, double>(in);
+    case 1:
+      return run<float, float>(in);
+    case 2:
+      return run<float, double>(in);
+    default:
+      throw std::invalid_argument("precision must be 0 (double), 1 or 2 (single)");
+  }
 }
 
 }  // namespace scattuccino
