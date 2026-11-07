@@ -53,6 +53,7 @@ class VoxelSimulation:
     absorbed: FloatArray  # per material
     absorbed_voxels: FloatArray  # (nx, ny, nz)
     seed: int
+    totals: dict[str, float] | None = None  # C++/CUDA: R, T, side and their errors without protocol
 
 
 def simulate_voxels(

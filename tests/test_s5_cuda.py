@@ -51,3 +51,17 @@ def test_cuda_large_run_statistics() -> None:
     r_cpu = cpu.protocol.weight[cpu.protocol.side == -1].sum()
     r_gpu = gpu.protocol.weight[gpu.protocol.side == -1].sum()
     assert abs(r_cpu - r_gpu) < 1e-3 * r_cpu
+
+
+def test_cuda_without_protocol_and_voxel_scoring() -> None:
+    # S5c: sums without the protocol and without voxel scoring equal the full run
+    med = _inclusion()
+    full = fast.simulate_voxels(med, 50_000, seed=3, backend="cuda")
+    lean = fast.simulate_voxels(
+        med, 50_000, seed=3, backend="cuda", record=False, score_voxels=False
+    )
+    assert full.totals is not None and lean.totals is not None
+    for key in ("r_diffuse", "t_diffuse", "side"):
+        assert abs(full.totals[key] - lean.totals[key]) < 1e-12
+    assert np.allclose(full.absorbed, lean.absorbed, rtol=1e-12)
+    assert lean.protocol.weight.size == 0

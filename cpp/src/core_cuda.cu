@@ -3,6 +3,7 @@
 // to per-packet slots (each packet leaves at most once) and compacted on the host.
 #include <cuda_runtime.h>
 
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 #include <memory>
@@ -42,27 +43,44 @@ struct DeviceExit {
   long long scatterings;
 };
 
+constexpr int kLocalMaterials = 16;  // per-thread accumulators; more materials use atomics directly
+
+// Persistent threads: every thread takes the next packet from a global counter until all are
+// done (no idle warps at the end of a launch with long-lived packets). Absorption per material is
+// summed in registers and flushed once per packet; the voxel grid is scored only on request.
 __global__ void k_trace(photon::Geometry geo, std::uint64_t seed, long long first, long long count,
-                        double sin_t0, double cos_t0, double w0, int i0, int j0, int nm,
-                        double* absorbed, double* absorbed_voxels, double* sums, bool record,
-                        DeviceExit* exits, double* paths) {
-  const long long t = blockIdx.x * static_cast<long long>(blockDim.x) + threadIdx.x;
-  if (t >= count) return;
-  const long long id = first + t;
-  double* my_path = record ? paths + t * nm : nullptr;
-  auto deposit = [&](int mat, int i, int j, int k, double dw) {
-    atomicAdd(&absorbed[mat], dw);
-    atomicAdd(&absorbed_voxels[(static_cast<long long>(i) * geo.ny + j) * geo.nz + k], dw);
-  };
-  auto add_path = [&](int mat, double d) {
-    if (my_path) my_path[mat] += d;
-  };
-  const photon::Exit e = photon::trace(geo, seed, static_cast<std::uint64_t>(id), sin_t0, cos_t0, w0, i0, j0,
-                                       deposit, add_path);
-  if (e.side == -1) { atomicAdd(&sums[0], e.w); atomicAdd(&sums[1], e.w * e.w); }
-  if (e.side == 1) { atomicAdd(&sums[2], e.w); atomicAdd(&sums[3], e.w * e.w); }
-  if (e.side == 0) atomicAdd(&sums[4], e.w);
-  if (record) exits[t] = DeviceExit{e.side, e.x, e.y, e.ux, e.uy, e.uz, e.w, e.zmax, e.scatterings};
+                        unsigned long long* next, double sin_t0, double cos_t0, double w0, int i0,
+                        int j0, int nm, bool score_voxels, double* absorbed, double* absorbed_voxels,
+                        double* sums, bool record, DeviceExit* exits, double* paths) {
+  double acc[kLocalMaterials];
+  double s_r = 0.0, s_r2 = 0.0, s_t = 0.0, s_t2 = 0.0, s_side = 0.0;
+  while (true) {
+    const long long t = static_cast<long long>(atomicAdd(next, 1ULL));
+    if (t >= count) break;
+    const long long id = first + t;
+    for (int k = 0; k < kLocalMaterials; ++k) acc[k] = 0.0;
+    double* my_path = record ? paths + t * nm : nullptr;
+    auto deposit = [&](int mat, int i, int j, int k, double dw) {
+      if (mat < kLocalMaterials) acc[mat] += dw; else atomicAdd(&absorbed[mat], dw);
+      if (score_voxels) atomicAdd(&absorbed_voxels[(static_cast<long long>(i) * geo.ny + j) * geo.nz + k], dw);
+    };
+    auto add_path = [&](int mat, double d) {
+      if (my_path) my_path[mat] += d;
+    };
+    const photon::Exit e = photon::trace(geo, seed, static_cast<std::uint64_t>(id), sin_t0, cos_t0, w0, i0,
+                                         j0, deposit, add_path);
+    for (int k = 0; k < kLocalMaterials && k < nm; ++k)
+      if (acc[k] != 0.0) atomicAdd(&absorbed[k], acc[k]);
+    if (e.side == -1) { s_r += e.w; s_r2 += e.w * e.w; }
+    if (e.side == 1) { s_t += e.w; s_t2 += e.w * e.w; }
+    if (e.side == 0) s_side += e.w;
+    if (record) exits[t] = DeviceExit{e.side, e.x, e.y, e.ux, e.uy, e.uz, e.w, e.zmax, e.scatterings};
+  }
+  atomicAdd(&sums[0], s_r);
+  atomicAdd(&sums[1], s_r2);
+  atomicAdd(&sums[2], s_t);
+  atomicAdd(&sums[3], s_t2);
+  atomicAdd(&sums[4], s_side);
 }
 
 }  // namespace
@@ -113,6 +131,9 @@ VoxelOutput simulate_voxels_cuda(const VoxelInput& in, int device) {
                        d_labels.ptr, d_mats.ptr, in.n_above, in.n_below, in.periodic,
                        in.w_threshold, in.roulette_m};
   Buffer<double> d_abs(nm), d_vox(nvox), d_sums(5);
+  Buffer<unsigned long long> d_next(1);
+  int sms = 0;
+  check(cudaDeviceGetAttribute(&sms, cudaDevAttrMultiProcessorCount, device), "attribute");
   d_abs.zero();
   d_vox.zero();
   d_sums.zero();
@@ -130,11 +151,14 @@ VoxelOutput simulate_voxels_cuda(const VoxelInput& in, int device) {
   for (long long first = 0; first < in.packets; first += chunk) {
     const long long count = std::min<long long>(chunk, in.packets - first);
     if (in.record) d_paths->zero();
+    d_next.zero();
     const int block = 128;
-    const unsigned grid = static_cast<unsigned>((count + block - 1) / block);
-    k_trace<<<grid, block>>>(geo, in.seed, first, count, st.sin_t0, st.cos_t0, 1.0 - st.r_specular, st.i0,
-                             st.j0, static_cast<int>(nm), d_abs.ptr, d_vox.ptr, d_sums.ptr, in.record,
-                             in.record ? d_exits->ptr : nullptr, in.record ? d_paths->ptr : nullptr);
+    const long long wanted = (count + block - 1) / block;
+    const unsigned grid = static_cast<unsigned>(std::min<long long>(wanted, static_cast<long long>(sms) * 16));
+    k_trace<<<grid, block>>>(geo, in.seed, first, count, d_next.ptr, st.sin_t0, st.cos_t0, 1.0 - st.r_specular,
+                             st.i0, st.j0, static_cast<int>(nm), in.score_voxels, d_abs.ptr, d_vox.ptr,
+                             d_sums.ptr, in.record, in.record ? d_exits->ptr : nullptr,
+                             in.record ? d_paths->ptr : nullptr);
     check(cudaGetLastError(), "k_trace");
     check(cudaDeviceSynchronize(), "synchronize");
     if (in.record) {

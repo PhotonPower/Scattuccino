@@ -59,6 +59,8 @@ def simulate_voxels(
     backend: str = "auto",
     threads: int | None = None,
     device: int = 0,
+    record: bool = True,
+    score_voxels: bool = True,
 ) -> VoxelSimulation:
     """backend: "python", "cpu", "cuda" or "auto" (CUDA if available, else CPU, else Python)."""
     if backend not in ("auto", "python", "cpu", "cuda"):
@@ -84,6 +86,7 @@ def simulate_voxels(
     inp.cos_incident, inp.seed, inp.packets = cos_incident, seed, packets
     inp.w_threshold, inp.roulette_m = w_threshold, roulette_m
     inp.threads = threads if threads and threads > 0 else (os.cpu_count() or 1)
+    inp.record, inp.score_voxels = record, score_voxels
     use_cuda = backend == "cuda" or (backend == "auto" and cuda_available())
     if use_cuda:
         if not cuda_available():
@@ -110,6 +113,14 @@ def simulate_voxels(
         np.array([m.mua for m in medium.materials]),
         np.asarray(out["id"], dtype=np.int64)[order],
     )
+    n = float(packets)
+    totals = {
+        "r_diffuse": out["sum_r"] / n,
+        "t_diffuse": out["sum_t"] / n,
+        "side": out["sum_side"] / n,
+        "r_err": float(np.sqrt(max(out["sum_r2"] / n - (out["sum_r"] / n) ** 2, 0.0) / n)),
+        "t_err": float(np.sqrt(max(out["sum_t2"] / n - (out["sum_t"] / n) ** 2, 0.0) / n)),
+    }
     return VoxelSimulation(
         medium,
         float(out["r_specular"]),
@@ -117,4 +128,5 @@ def simulate_voxels(
         out["absorbed"] / packets,
         np.asarray(out["absorbed_voxels"]).reshape(lab.shape) / packets,
         seed,
+        totals,
     )

@@ -26,3 +26,6 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - S5b: gemeinsamer Paketcode für CPU und GPU (`cpp/include/scattuccino/photon.hpp`), CUDA-Kernel
   (`cpp/src/core_cuda.cu`, ein Thread je Paket), Backend `cuda` in `scattuccino.fast`, Test T14 und
   Anleitung für den Server (`docs/agent-server-s5b.md`).
+- S5b auf dem Server bestätigt; S5c: persistente Threads, Absorption in Registern, Voxelwertung und
+  Protokoll abschaltbar; Summen ohne Protokoll (`VoxelSimulation.totals`); Messauftrag
+  `docs/agent-server-s5c.md`.

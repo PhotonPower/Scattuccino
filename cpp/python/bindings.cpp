@@ -56,6 +56,7 @@ PYBIND11_MODULE(_core, m) {
       .def_readwrite("w_threshold", &VoxelInput::w_threshold)
       .def_readwrite("roulette_m", &VoxelInput::roulette_m)
       .def_readwrite("record", &VoxelInput::record)
+      .def_readwrite("score_voxels", &VoxelInput::score_voxels)
       .def_readwrite("threads", &VoxelInput::threads);
   m.def("uniforms", [](std::uint64_t seed, std::uint64_t id, int n) {
     CounterRandom r(seed, id);
