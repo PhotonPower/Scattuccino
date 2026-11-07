@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scattuccino"
+version = "0.0.1"
+description = "Light transport in tissue and tissue phantoms for biomedical optics"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "scipy>=1.10"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+scattuccino = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -m 'not slow'"
+markers = ["slow: expensive reference computation (pytest -m slow)"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "NPY", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.mypy]
+strict = true
+python_version = "3.10"
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["scipy", "scipy.*"]
+ignore_missing_imports = true
