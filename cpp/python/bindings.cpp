@@ -57,6 +57,7 @@ PYBIND11_MODULE(_core, m) {
       .def_readwrite("roulette_m", &VoxelInput::roulette_m)
       .def_readwrite("record", &VoxelInput::record)
       .def_readwrite("score_voxels", &VoxelInput::score_voxels)
+      .def_readwrite("precision", &VoxelInput::precision)
       .def_readwrite("threads", &VoxelInput::threads);
   m.def("uniforms", [](std::uint64_t seed, std::uint64_t id, int n) {
     CounterRandom r(seed, id);
@@ -72,6 +73,8 @@ PYBIND11_MODULE(_core, m) {
     d["sum_t2"] = o.sum_t2;
     d["sum_side"] = o.sum_side;
     d["r_specular"] = o.r_specular;
+    d["n_exit"] = o.n_exit;
+    d["n_roulette"] = o.n_roulette;
     d["absorbed"] = arr(o.absorbed);
     d["absorbed_voxels"] = arr(o.absorbed_voxels);
     d["id"] = arr(o.id);

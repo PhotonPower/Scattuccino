@@ -45,12 +45,15 @@ struct VoxelInput {
   double w_threshold = 1e-4, roulette_m = 10.0;
   bool record = true;  // protocol of the leaving packets
   bool score_voxels = true;  // absorbed power per voxel (the GPU skips the atomics if false)
+  // 0 double (reference); 1 single (float for direction, steps, position, phase function)
+  int precision = 0;
   int threads = 1;
 };
 
 struct VoxelOutput {
   double r_specular = 0.0;
   double sum_r = 0.0, sum_r2 = 0.0, sum_t = 0.0, sum_t2 = 0.0, sum_side = 0.0;  // exit weights
+  std::int64_t n_exit = 0, n_roulette = 0;  // packets that left / were killed by the roulette
   std::vector<double> absorbed;         // per material, summed weight (not divided by packets)
   std::vector<double> absorbed_voxels;  // per voxel
   // protocol of leaving packets, in packet order

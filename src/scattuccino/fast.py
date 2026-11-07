@@ -61,10 +61,20 @@ def simulate_voxels(
     device: int = 0,
     record: bool = True,
     score_voxels: bool = True,
+    precision: str = "double",
 ) -> VoxelSimulation:
-    """backend: "python", "cpu", "cuda" or "auto" (CUDA if available, else CPU, else Python)."""
+    """backend: "python", "cpu", "cuda" or "auto" (CUDA if available, else CPU, else Python).
+
+    precision: "double" (default, reference) or "single" (float32 for direction, step lengths,
+    phase function, Fresnel and position; weights, sums and random numbers stay double). The
+    Python reference is double only.
+    """
+    if precision not in ("double", "single"):
+        raise ValueError("precision must be 'double' or 'single'")
     if backend not in ("auto", "python", "cpu", "cuda"):
         raise ValueError("backend must be 'auto', 'python', 'cpu' or 'cuda'")
+    if precision == "single" and (backend == "python" or (backend == "auto" and _core is None)):
+        raise ValueError("precision='single' needs the C++ core (backend 'cpu' or 'cuda')")
     if backend == "python" or (backend == "auto" and _core is None):
         return _python_voxels(medium, packets, seed, cos_incident, w_threshold, roulette_m)
     if _core is None:
@@ -87,6 +97,7 @@ def simulate_voxels(
     inp.w_threshold, inp.roulette_m = w_threshold, roulette_m
     inp.threads = threads if threads and threads > 0 else (os.cpu_count() or 1)
     inp.record, inp.score_voxels = record, score_voxels
+    inp.precision = 0 if precision == "double" else 1
     use_cuda = backend == "cuda" or (backend == "auto" and cuda_available())
     if use_cuda:
         if not cuda_available():
@@ -118,6 +129,8 @@ def simulate_voxels(
         "r_diffuse": out["sum_r"] / n,
         "t_diffuse": out["sum_t"] / n,
         "side": out["sum_side"] / n,
+        "n_exit": float(out["n_exit"]),
+        "n_roulette": float(out["n_roulette"]),
         "r_err": float(np.sqrt(max(out["sum_r2"] / n - (out["sum_r"] / n) ** 2, 0.0) / n)),
         "t_err": float(np.sqrt(max(out["sum_t2"] / n - (out["sum_t"] / n) ** 2, 0.0) / n)),
     }

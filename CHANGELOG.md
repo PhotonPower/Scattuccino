@@ -29,3 +29,6 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - S5b auf dem Server bestätigt; S5c: persistente Threads, Absorption in Registern, Voxelwertung und
   Protokoll abschaltbar; Summen ohne Protokoll (`VoxelSimulation.totals`); Messauftrag
   `docs/agent-server-s5c.md`.
+- S5d: FP32-Option `precision="single"` für CPU- und CUDA-Kern (Paketcode als Template auf die
+  Genauigkeit, double bitgleich wie zuvor), Zähler `n_exit`/`n_roulette`, Test T15; auf der
+  GPU 11- bis 13-mal schneller als in double.

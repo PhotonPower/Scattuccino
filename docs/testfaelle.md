@@ -18,6 +18,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T6b | Tetraedernetz = Schichten, gekrümmte Grenzen | T1, Kugel/Zylinder | S4b | ○ |
 | T13 | C++-Kern (S5a) gegen die Python-Referenz, je Paket: Zufallszahlen, Phasenfunktionen, Austrittsseite, Gewicht, Zahl der Streuungen bitgleich; Orte, Richtungen, Wege bis auf gesammelte letzte Bits (≤ 7e−13); Threads ändern nichts | Python-Referenz | S5 | ✅ |
 | T14 | CUDA-Kern (S5b) gegen den CPU-Kern je Paket (≥ 99,9 % gleiche Entscheidungen), Summen auf 10⁻³; ohne Protokoll/Voxelwertung gleich (S5c) | CPU-Kern | S5 | ✅ S5b und S5c auf dem Server (2026-11-07) |
+| T15 | FP32-Option (S5d): single gegen double statistisch (4σ), Energie und Paketzahl in single, GPU gegen CPU je Paket in single; double bitgleich wie T13 | double (Python-Referenz), CPU single | S5 | ✅ auf dem Server (2026-11-07) |
 | T7 | Polarisation | Ramella-Roman, Prahl, Jacques (2005) | S6 | ○ |
 | T8 | Fluoreszenz | Fluoreszenz-Diffusion | S7 | ○ |
 | T9 | DCS/LSCI | Korrelationsdiffusion | S8 | ○ |
@@ -164,3 +165,46 @@ Physik zu ändern; (3) wäre ein FP32-Modus und ändert die Gleichheit mit der C
 Lokale Akkumulation und persistente Threads machen die GPU 2,5- bzw. 5,4-mal schneller als in S5b
 und 1,9- bzw. 2,7-mal schneller als 32 CPU-Kerne. Der verbleibende Engpass ist FP64 (1/64 des
 FP32-Durchsatzes der RTX 6000 Ada) → FP32-Option (D7).
+
+## T15: FP32-Option (S5d, 2026-11-07)
+
+`fast.simulate_voxels(…, precision="single")` für CPU und CUDA (`"double"` bleibt Standard und
+Referenz, Entscheidung D7). In float: Richtung, Schrittlänge, Abstände zu den Voxelflächen,
+Position, Phasenfunktion (Tabellen als float-Kopie), Fresnel, Streurichtung, `log`/`sin`/`cos`/
+`pow`/`cbrt`/`sqrt` (float-Funktionen); ohne Fast-Math und ohne `__logf`-Intrinsics. Immer double:
+Gewicht, absorbierte Energie, Summen, Protokollwerte und die Zufallszahl (53 Bit, erst bei der
+Verwendung nach float gewandelt – der Zufallsstrom je Paket bleibt derselbe), außerdem der
+Absorptionsanteil je Wechselwirkung (μa/(μa+μs) in double). Nur für float übersetzt: stabile Formen
+für die tabellierte Phasenfunktion und die Drehung nahe der Polachse, Renormierung der Richtung,
+Paket beim Flächenübertritt auf die Fläche gesetzt (Voxelindex und Position stimmen immer),
+Zufallszahl nie genau 1.
+
+**double unverändert:** Protokoll (Seite, Orte, Richtungen, Gewichte, Wege, Streuzahlen) beider
+Kerne für beide Testmedien (10⁵ Pakete) bitgleich zum Stand vor dem Umbau; die atomaren
+CUDA-Summen (Absorption) weichen nur durch die Summationsreihenfolge um 10⁻¹⁵ ab.
+
+Tests (`tests/test_s5d_single.py`, 10 Tests grün; 61 mit der ganzen Suite, CUDA erforderlich):
+
+- single gegen double (CPU): 20 Chargen à 10⁴ Pakete je Genauigkeit (andere Seeds), R_d, T_d,
+  seitlicher Verlust, Absorption je Material und R(ρ) auf 8 Ringen 0–4 mm; größte Abweichung in
+  σ des kombinierten Standardfehlers: Einschluss 2,14 σ, Schichten 1,23 σ, schwach absorbierend
+  2,61 σ (Grenze 4 σ).
+- Energie in single (2·10⁵ Pakete): |r_spec + ΣAustritte + Absorption − 1| < 10⁻⁴; Austritte +
+  Roulette-Abbrüche = Pakete (Zähler `n_exit`, `n_roulette`), Protokoll = Austritte.
+- GPU single gegen CPU single je Paket (Variante A, im Code): 100 % gleiche Seite und Streuzahl
+  in allen drei Medien, Summen gleich (Abweichung 0); mit Variante B 99,985 % bei der schwach
+  absorbierenden Schicht, Summen auf 1,4·10⁻⁵.
+
+**Positionsvariante:** (A) Position in float, (B) Position in double bei float-Richtung. Beide
+bestehen T15; A ist auf der GPU 2,3- bis 2,6-mal schneller → A im Code, B entfernt.
+
+**Laufzeiten** (10⁷ Pakete, `record=False`, `score_voxels=False`, RTX 6000 Ada, 32 CPU-Kerne):
+
+| Fall | CPU double | CPU single A | CPU single B | CUDA double | CUDA single A | CUDA single B |
+| --- | --- | --- | --- | --- | --- | --- |
+| Würfel 101³ | 25,7 s | 23,5 s | 24,1 s | 13,3 s | **1,2 s** | 2,8 s |
+| schwach absorbierend | 172,7 s | 143,4 s | 147,6 s | 61,6 s | **4,8 s** | 12,7 s |
+
+R (Würfel) = 0,220912 ± 0,000114 in double, 0,220911 in single; R (schwach absorbierend) =
+0,603645 ± 0,000112 in double, 0,603643–0,603644 in single. `--fmad=true` nur für float
+(Messvariante, nicht im Code): 1,3–1,5 s bzw. 4,7–4,8 s, keine Wirkung.
