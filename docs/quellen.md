@@ -16,3 +16,4 @@ prüfen).
 | thrane2000 | L. Thrane, H. T. Yura, P. E. Andersen, J. Opt. Soc. Am. A 17 (2000) | Z | S9 |
 | bohren1983 | C. F. Bohren, D. R. Huffman, Absorption and Scattering of Light by Small Particles (1983) | Z | S3 Mie |
 | chandrasekhar1960 | S. Chandrasekhar, Radiative Transfer, Dover (1960), Kap. V (H-Funktion, Reflexion des halbunendlichen Mediums) | Z | S1 Referenz T1b |
+| vandehulst1980 | H. C. van de Hulst, Multiple Light Scattering, Academic Press (1980) – Werte für R_d, T_d zitiert nach wang1995 | Z | Literaturfall T1c |
