@@ -18,3 +18,5 @@ prüfen).
 | chandrasekhar1960 | S. Chandrasekhar, Radiative Transfer, Dover (1960), Kap. V (H-Funktion, Reflexion des halbunendlichen Mediums) | Z | S1 Referenz T1b |
 | vandehulst1980 | H. C. van de Hulst, Multiple Light Scattering, Academic Press (1980) – Werte für R_d, T_d zitiert nach wang1995 | Z | Literaturfall T1c |
 | egan1979 | W. G. Egan, T. W. Hilgeman, Optical Properties of Inhomogeneous Materials (1979) – Näherung r_d(n), zitiert nach farrell1992 | Z | S2 Randkoeffizient A |
+| bevilacqua1999 | F. Bevilacqua, C. Depeursinge, „Monte Carlo study of diffuse reflectance at source–detector separations close to one transport mean free path“, J. Opt. Soc. Am. A 16 (1999) | Z | S3: MHG, γ |
+| reynolds1980 | L. O. Reynolds, N. J. McCormick, „Approximate two-parameter phase function for light scattering“, J. Opt. Soc. Am. 70 (1980) | Z | S3: Gegenbauer-Phasenfunktion |

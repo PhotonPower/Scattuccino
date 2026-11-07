@@ -12,8 +12,8 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T3b | Mikroskopisches Beer-Lambert: Umgewichtung auf andere μa je Schicht exakt; ⟨L_i⟩ = −∂ ln R/∂μa,i | exakt | S2 | ✅ |
 | T3c | R(ρ) in 4–8 Transportlängen (n = 1; 1,4) | Kienle-Patterson (Diffusion, Näherung) | S2 | ✅ |
 | T3d | lateral integrierte Fluenz in 3–10 mm Tiefe; mittlere Laufzeit 4–7 mm | Diffusion (Dipol mit extrapolierter Grenze, Patterson) | S2 | ✅ |
-| T4 | Subdiffusive Reflexion | Literatur (Bevilacqua/Depeursinge, Kanick/Amelink) | S3 | ○ |
-| T5 | Phasenfunktion aus Mie | eigene Mie-Reihe, CliffordBem | S3 | ○ |
+| T4 | Subdiffusive Reflexion: gleiches g, verschiedenes γ | Verhalten nach Bevilacqua/Depeursinge (nahe der Quelle stark, weit weg schwach abhängig) | S3 | ✅ |
+| T5 | Phasenfunktionen (HG, MHG, Gegenbauer, tabelliert, Mie): Normierung, Momente der Stichproben, geschlossene Formen; Mie-Grenzfälle; Monte Carlo gegen Adding-Doubling je Phasenfunktion | analytisch, Rayleigh, Extinktionsparadoxon, Adding-Doubling | S3 | ✅ (Querprobe CliffordBem offen) |
 | T6 | Voxel/Netz = Schichten | T1 | S4 | ○ |
 | T7 | Polarisation | Ramella-Roman, Prahl, Jacques (2005) | S6 | ○ |
 | T8 | Fluoreszenz | Fluoreszenz-Diffusion | S7 | ○ |
@@ -78,3 +78,24 @@ Monte Carlo gegen Adding-Doubling (2·10⁵ Pakete):
   Transportlänge) 1,87-fach – Diffusion gilt dort nicht.
 - **Zeitbereich:** mittlere Laufzeit 4–7 mm: 54,2 ± 0,3 ps gegen 48,9 ps (+11 %; Diffusion zu früh
   bei wenigen Transportlängen).
+
+## T4, T5: Phasenfunktionen und Mie (S3)
+
+`scattuccino.phase` (HG, modifizierte HG, Gegenbauer/Reynolds-McCormick, tabelliert mit exakter
+Umkehrung der stückweise linearen Dichte, Mie), `scattuccino.mie`; `Layer(phase=…)` in Transport
+und Adding-Doubling.
+
+| Phasenfunktion | g | γ | Monte Carlo gegen Adding-Doubling (d = 1 mm, μa = 0,1, μs = 10 /mm, n = 1,4) |
+| --- | --- | --- | --- |
+| HG 0,9 | 0,900 | 1,90 | (S1) |
+| MHG (g_HG = 0,9, β = 0,8) | 0,720 | 0,97 | innerhalb 4 σ |
+| Gegenbauer (g = 0,8, α = 1) | 0,914 | 2,21 | R_d 0,21935 ± 0,00058 gegen 0,21952 (3·10⁵ Pakete) |
+| Mie, 1 µm Polystyrol in Wasser, 633 nm | 0,917 | 2,16 | innerhalb 4 σ |
+
+Mie: Rayleigh-Grenzfall Q_sca auf 1,8·10⁻⁴ (x = 0,05), Winkelverteilung ∝ 1 + cos²θ;
+Extinktionsparadoxon Q_ext = 2,044 bei x = 300.
+
+**Subdiffusiver Bereich:** HG (γ = 1,90) und MHG (γ = 0,88), beide g = 0,9, also gleiches μs′:
+R(ρ) zwischen 0 und 0,1 mm unterscheidet sich um den Faktor 5,2, zwischen 6 und 8 mm um 15 % – nahe
+der Quelle bestimmt γ, weit weg μs′ die Reflexion. Für Verfahren mit kleinem Faserabstand (DRS mit
+einer Faser, SFDI bei hohen Ortsfrequenzen) reicht μs′ deshalb nicht.

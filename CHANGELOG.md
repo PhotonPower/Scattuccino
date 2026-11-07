@@ -16,3 +16,6 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - S2: Photonenprotokoll (`scattuccino.transport`), Volumengitter, mikroskopisches Beer-Lambert
   mit exakter Umgewichtung, Detektoren (`scattuccino.detectors`), Diffusionsreferenzen
   (`scattuccino.diffusion`, Kienle-Patterson); Tests T3a–T3d.
+- S3: Phasenfunktionen (`scattuccino.phase`: HG, MHG, Gegenbauer, tabelliert, Mie) mit Momenten und
+  γ, δ; Mie-Reihe (`scattuccino.mie`); `Layer(phase=…)` in Transport und Adding-Doubling; Tests
+  T4, T5.

@@ -23,7 +23,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from scattuccino._types import FloatArray, IntArray
-from scattuccino.layers import Stack, _scatter, fresnel_unpolarised, sample_hg
+from scattuccino.layers import Stack, _scatter, fresnel_unpolarised
 
 C_MM_PER_PS = 0.299792458
 
@@ -121,7 +121,7 @@ def simulate(
     mua = np.array([layer.mua for layer in stack.layers])
     mus = np.array([layer.mus for layer in stack.layers])
     mut = mus if mbl else mua + mus
-    g = np.array([layer.g for layer in stack.layers])
+    phases = [layer.phase_function for layer in stack.layers]
     r_sp_arr, cos_t0 = fresnel_unpolarised(stack.n_above, n_layer[0], np.array([cos_incident]))
     r_sp = float(r_sp_arr[0])
     sin_t0 = stack.n_above / n_layer[0] * np.sqrt(1 - cos_incident**2)
@@ -258,7 +258,11 @@ def simulate(
                     )
                     deposit(dw, z[ib], lb, x[ib], y[ib])
                     w[ib] -= dw
-                ct = sample_hg(g[lb], rng.random(ib.size))
+                xi_s = rng.random(ib.size)
+                ct = np.empty(ib.size)
+                for li_ in np.unique(lb):
+                    sel_ = lb == li_
+                    ct[sel_] = phases[int(li_)].sample(xi_s[sel_])
                 phi = 2 * np.pi * rng.random(ib.size)
                 ux[ib], uy[ib], uz[ib] = _scatter(ux[ib], uy[ib], uz[ib], ct, phi)
                 nsc[ib] += 1
