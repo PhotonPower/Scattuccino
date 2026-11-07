@@ -13,18 +13,25 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from scattuccino._types import FloatArray
+from scattuccino.phase import HenyeyGreenstein, PhaseFunction
 
 
 @dataclass(frozen=True)
 class Layer:
     """Homogeneous layer: thickness d (mm, may be np.inf for the last layer), μa, μs (1/mm),
-    Henyey-Greenstein anisotropy g and refractive index n."""
+    Henyey-Greenstein anisotropy g, refractive index n and optionally another phase function
+    (`scattuccino.phase`; S3, used by `scattuccino.transport` and `adding_doubling`)."""
 
     d: float
     mua: float
     mus: float
     g: float = 0.0
     n: float = 1.0
+    phase: PhaseFunction | None = None
+
+    @property
+    def phase_function(self) -> PhaseFunction:
+        return self.phase if self.phase is not None else HenyeyGreenstein(self.g)
 
     @property
     def mut(self) -> float:

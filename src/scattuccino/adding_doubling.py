@@ -21,11 +21,13 @@ the first surface, all other reflected and transmitted power, absorption.
 from __future__ import annotations
 
 import itertools
+from collections.abc import Callable
 
 import numpy as np
 
 from scattuccino._types import FloatArray
 from scattuccino.layers import fresnel_unpolarised
+from scattuccino.phase import HenyeyGreenstein, PhaseFunction
 
 
 def _quadrature(n: int, breaks: list[float]) -> tuple[FloatArray, FloatArray]:
@@ -40,14 +42,18 @@ def _quadrature(n: int, breaks: list[float]) -> tuple[FloatArray, FloatArray]:
     return np.concatenate(xs), np.concatenate(ws)
 
 
-def _hg_azimuthal(g: float, mu_out: FloatArray, mu_in: FloatArray, n_phi: int = 1024) -> FloatArray:
-    """p̄(μ, μ′) = (1/2π) ∫ p_HG(μμ′ + √(1−μ²)√(1−μ′²) cos φ) dφ (rows μ, columns μ′)."""
+def _azimuthal(
+    pdf: Callable[[FloatArray], FloatArray],
+    mu_out: FloatArray,
+    mu_in: FloatArray,
+    n_phi: int = 1024,
+) -> FloatArray:
+    """p̄(μ, μ′) = (1/2π) ∫ p(μμ′ + √(1−μ²)√(1−μ′²) cos φ) dφ (rows μ, columns μ′)."""
     phi = 2 * np.pi * (np.arange(n_phi) + 0.5) / n_phi
     s_out = np.sqrt(np.clip(1 - mu_out**2, 0, 1))[:, None, None]
     s_in = np.sqrt(np.clip(1 - mu_in**2, 0, 1))[None, :, None]
     cos_t = mu_out[:, None, None] * mu_in[None, :, None] + s_out * s_in * np.cos(phi)[None, None, :]
-    p = (1 - g * g) / (4 * np.pi * (1 + g * g - 2 * g * cos_t) ** 1.5)
-    return np.asarray(p.mean(axis=2))
+    return np.asarray(pdf(np.clip(cos_t, -1.0, 1.0)).mean(axis=2))
 
 
 def slab(
@@ -61,10 +67,12 @@ def slab(
     cos_incident: float = 1.0,
     n_quad: int = 48,
     doublings: int = 24,
+    phase: PhaseFunction | None = None,
 ) -> dict[str, float]:
     """Specular and diffuse reflectance, transmittance, absorption (d = np.inf: half space)."""
     mut = mua + mus
     a = mus / mut if mut > 0 else 0.0
+    pdf = (phase if phase is not None else HenyeyGreenstein(g)).pdf
     breaks = []
     for n_out in (n_above, n_below):
         if n_out < n_slab:
@@ -74,12 +82,12 @@ def slab(
     mu0 = float(mu0_arr[0])
     power = 1.0 - float(r_sp[0])
     # phase function on the nodes, plus the collimated direction
-    p_up = _hg_azimuthal(g, -mu, mu)  # into upward directions from downward ones
-    p_dn = _hg_azimuthal(g, mu, mu)
+    p_up = _azimuthal(pdf, -mu, mu)  # into upward directions from downward ones
+    p_dn = _azimuthal(pdf, mu, mu)
     norm = 2 * np.pi * ((p_up + p_dn) * w[:, None]).sum(axis=0)  # per incident direction
     p_up, p_dn = p_up / norm, p_dn / norm
-    p0_up = _hg_azimuthal(g, -mu, np.array([mu0]))[:, 0]
-    p0_dn = _hg_azimuthal(g, mu, np.array([mu0]))[:, 0]
+    p0_up = _azimuthal(pdf, -mu, np.array([mu0]))[:, 0]
+    p0_dn = _azimuthal(pdf, mu, np.array([mu0]))[:, 0]
     norm0 = 2 * np.pi * ((p0_up + p0_dn) * w).sum()
     p0_up, p0_dn = p0_up / norm0, p0_dn / norm0
     tau = mut * d

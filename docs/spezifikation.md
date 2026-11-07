@@ -48,3 +48,10 @@ Schicht/Gewebe, Zahl der Streuungen, maximale Tiefe, Impulsübertrag je Gewebe (
   iterativ gelöst) – exakt, unabhängig vom Monte Carlo.
 - **Adding-Doubling** (prahl1993) für Schichten mit HG-Streuung und Brechzahlsprüngen (S1b).
 - Energieerhaltung.
+
+## 5. Zufallszahlen (ab S4)
+
+Zählerbasiert, ein Strom je Paket (`scattuccino.random`): u = mix(Seed, Paketnummer, k) mit dem
+SplitMix64-Finaliser, 53 Bit. Ergebnisse sind damit unabhängig von Stapelgröße, Reihenfolge und
+Verfeinerung der Geometrie und auf der GPU bitgleich reproduzierbar. Die S1/S2-Referenzen behalten
+ihren NumPy-Generator (ihre Tests bleiben unverändert).
