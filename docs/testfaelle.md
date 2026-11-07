@@ -8,7 +8,10 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T1b | Halbunendlich, isotrope Streuung, gleiche Brechzahl (a = 0,5; 0,9; 0,99) | Chandrasekhars H-Funktion: R = 1 − H(1)√(1 − a) | S1 | ✅ |
 | T1c | Schichten mit HG-Streuung und Brechzahlsprüngen, schräger Einfall | Adding-Doubling (eigene Umsetzung); dieses gegen H-Funktion, ohne Streuung exakt und gegen van de Hulsts Werte | S1 | ✅ |
 | T2 | Energieerhaltung (Reflexion + Transmission + Absorption = 1), zwei Schichten, Brechzahlsprünge, schräger Einfall | exakt im Erwartungswert | S1 | ✅ |
-| T3 | Ortsaufgelöste Reflexion, Zeit- und Frequenzbereich | Diffusionslösungen (Farrell, Patterson, Kienle-Patterson) im diffusen Bereich | S2 | ○ |
+| T3a | Protokoll und Detektoren: Buchhaltung (Volumengitter = Absorption, ∫R(ρ) = R_d, f = 0 = CW, ∫TPSF = CW, Σ Teilwege = Weg), Gesamtreflexion beider Absorptionsverfahren gegen Adding-Doubling | exakt bzw. Adding-Doubling | S2 | ✅ |
+| T3b | Mikroskopisches Beer-Lambert: Umgewichtung auf andere μa je Schicht exakt; ⟨L_i⟩ = −∂ ln R/∂μa,i | exakt | S2 | ✅ |
+| T3c | R(ρ) in 4–8 Transportlängen (n = 1; 1,4) | Kienle-Patterson (Diffusion, Näherung) | S2 | ✅ |
+| T3d | lateral integrierte Fluenz in 3–10 mm Tiefe; mittlere Laufzeit 4–7 mm | Diffusion (Dipol mit extrapolierter Grenze, Patterson) | S2 | ✅ |
 | T4 | Subdiffusive Reflexion | Literatur (Bevilacqua/Depeursinge, Kanick/Amelink) | S3 | ○ |
 | T5 | Phasenfunktion aus Mie | eigene Mie-Reihe, CliffordBem | S3 | ○ |
 | T6 | Voxel/Netz = Schichten | T1 | S4 | ○ |
@@ -52,3 +55,26 @@ Monte Carlo gegen Adding-Doubling (2·10⁵ Pakete):
 | ∞ | 0,1 / 0,9 | 0,75 | 1 / 1,33 / – | 1 | 0,09289 ± 0,00041 / 0,09246 (1,0 σ) | – |
 | 0,5 | 0,3 / 6 | 0,7 | 1 / 1,45 / 1,52 | 0,7 | 0,11518 ± 0,00057 / 0,11495 (0,4 σ) | 0,56220 ± 0,00072 / 0,56293 (−1,0 σ) |
 | 0,2 | 0,05 / 20 | 0,95 | 1,33 / 1,37 / 1 | 1 | 0,17234 ± 0,00082 / 0,17158 (0,9 σ) | 0,81078 ± 0,00085 / 0,81159 (−1,0 σ) |
+
+## T3: Protokoll, Detektoren und Diffusion (S2)
+
+`scattuccino.transport.simulate` (Protokoll je austretendem Paket, Volumengitter (r, z), Verfahren
+„implicit“ und „mbl“), `scattuccino.detectors` (R(ρ), TPSF, Frequenzbereich, Teilweglängen),
+`scattuccino.diffusion` (Referenzen). Halbraum μa = 0,05/mm, μs = 10/mm, g = 0,9 (μs′ = 1/mm).
+
+- **Exakt:** Volumengitter = Absorption (10⁻¹¹), ∫R(ρ)dA = R_d (10⁻¹²), f = 0 = CW, ∫TPSF = CW;
+  Umgewichtung „mbl“ auf andere μa je Schicht gleich einem direkten Lauf (gleicher Seed, ohne
+  Roulette: identische Wege, Gewichte auf 10⁻¹⁵); ⟨L_i⟩ = −∂ ln R/∂μa,i auf 10⁻⁴.
+- **R(ρ) gegen Kienle-Patterson** (n = 1 / 1,4), Verhältnis MC/Diffusion:
+
+  | ρ (mm) | 1,25 | 2,25 | 4,25 | 6,25 | 8,25 |
+  | --- | --- | --- | --- | --- | --- |
+  | n = 1 | 0,83 | 0,85 | 0,93 | 0,97 | 0,97 |
+  | n = 1,4 | 0,86 | 0,91 | 0,91 | 0,95 | 0,95 |
+
+  Farrells reiner Flussansatz liegt bei n = 1,4 um bis zu 29 % daneben (Kienle-Patterson: Fluss und
+  Fluenz) – deshalb ist Kienle-Patterson die Referenz.
+- **Fluenz:** lateral integriert 3–10 mm Tiefe innerhalb 3,5 % der Diffusion; bei 0,1 mm (unter einer
+  Transportlänge) 1,87-fach – Diffusion gilt dort nicht.
+- **Zeitbereich:** mittlere Laufzeit 4–7 mm: 54,2 ± 0,3 ps gegen 48,9 ps (+11 %; Diffusion zu früh
+  bei wenigen Transportlängen).

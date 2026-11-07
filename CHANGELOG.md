@@ -13,3 +13,6 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   (`scattuccino.reference`: ohne Streuung, H-Funktion); Tests T1a, T1b, T2.
 - S1b: Adding-Doubling (`scattuccino.adding_doubling`) als unabhängige Referenz für Schichten mit
   HG und Brechzahlsprüngen; Monte Carlo gegen Adding-Doubling (T1c).
+- S2: Photonenprotokoll (`scattuccino.transport`), Volumengitter, mikroskopisches Beer-Lambert
+  mit exakter Umgewichtung, Detektoren (`scattuccino.detectors`), Diffusionsreferenzen
+  (`scattuccino.diffusion`, Kienle-Patterson); Tests T3a–T3d.
