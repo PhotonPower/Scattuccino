@@ -18,7 +18,9 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T6b | Tetraedernetz: Voxelgeometrie als Tetraeder je Paket gleich dem Voxelgang; Glaskugel (gekrümmte Grenze) gegen geometrische Optik | Voxelgang (S4a); Fresnel, Snellius | S4b | ✅ |
 | T13 | C++-Kern (S5a) gegen die Python-Referenz, je Paket: Zufallszahlen, Phasenfunktionen, Austrittsseite, Gewicht, Zahl der Streuungen bitgleich; Orte, Richtungen, Wege bis auf gesammelte letzte Bits (≤ 7e−13); Threads ändern nichts | Python-Referenz | S5 | ✅ |
 | T14 | CUDA-Kern (S5b) gegen den CPU-Kern je Paket (≥ 99,9 % gleiche Entscheidungen), Summen auf 10⁻³ | CPU-Kern | S5 | ○ (Test auf dem Server) |
-| T7 | Polarisation | Ramella-Roman, Prahl, Jacques (2005) | S6 | ○ |
+| T7a | Polarisation, Streuschritt: Stokes aus Feldern (Mie über S1, S2; Rayleigh über das Dipolfeld) | unabhängige Feldrechnung | S6a | ✅ |
+| T7b | Polarisation im Transport: unpolarisiert = skalar; reine Zustände bleiben rein; Polarisationsgedächtnis (kleine/große Kugeln, linear/zirkular) | skalarer Transport; exakt; MacKintosh et al. (1989) | S6a | ✅ |
+| T7c | Fresnel-Mueller an Brechzahlsprüngen; Benchmarks von Ramella-Roman, Prahl, Jacques | Literatur | S6b | ○ |
 | T8 | Fluoreszenz | Fluoreszenz-Diffusion | S7 | ○ |
 | T9 | DCS/LSCI | Korrelationsdiffusion | S8 | ○ |
 | T10 | OCT | Einfachstreuung, erweitertes Huygens-Fresnel | S9 | ○ |
@@ -151,3 +153,27 @@ eigene Python-Fassung, weil die Prüfung gegen den Python-geprüften Voxelgang e
 - **Glaskugel** (n = 1,5, Ikosaeder Stufe 5, 20 480 Tetraeder), Strahl unter 30,4° zur Facette:
   spiegelnde Reflexion = Fresnel (exakt), Anteil in der Richtung des direkt durchgehenden Strahls
   (Ablenkung 2(θᵢ − θₜ)) 0,9188 gegen (1 − R₁)(1 − R₂) = 0,9185; Energie auf 10⁻¹².
+
+## T7a, T7b: Polarisation (S6a)
+
+`scattuccino.polarisation`: Stokes-Vektoren im mitgeführten Bezugssystem (u, v, w = u × v),
+Mueller-Matrix der Kugel aus S1, S2 (Bohren & Huffman), θ aus S11, φ durch Verwerfen aus
+S11 + S12 (Q cos 2φ + U sin 2φ); Schichten mit angepasster Brechzahl (Fresnel-Mueller folgt in
+S6b). Python-Referenz; der C++-Kern folgt.
+
+- **Streuschritt gegen Felder** (200 zufällige Richtungen, Bezugssysteme, Polarisationen und
+  Winkel): Mie über die Amplituden S1, S2 und Rayleigh über das Dipolfeld −û′ × (û′ × E) auf 10⁻⁷
+  (Interpolation der Tabelle) – Drehung des Bezugssystems, Mueller-Matrix und Vorzeichen von V
+  stimmen.
+- **Unpolarisiert** (Mie, 1 µm Polystyrol in Wasser): R 0,2006 / T 0,6373 gegen den skalaren
+  Transport 0,2018 / 0,6363 (unabhängige Läufe).
+- **Reine Zustände bleiben rein** auf 10⁻¹⁴ (nach Wiederherstellen von m₁₂² + m₃₃² + m₃₄² = 1
+  in der interpolierten Tabelle; vorher 2,6·10⁻⁴).
+- **Polarisationsgedächtnis** in Rückstreuung aus dem Halbraum:
+
+  | Kugeln | g | linear: DOP_lin | zirkular: DOP_zirk |
+  | --- | --- | --- | --- |
+  | x = 0,5 | 0,04 | 0,31 | −0,20 (Helizität kehrt um) |
+  | x = 10 | 0,93 | 0,03 | +0,33 (Helizität bleibt) |
+
+  wie bei MacKintosh et al. (1989): kleine Streuer erhalten lineare, große zirkulare Polarisation.

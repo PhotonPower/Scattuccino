@@ -28,3 +28,5 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Anleitung für den Server (`docs/agent-server-s5b.md`).
 - S4b: Tetraedernetze im C++-Kern (`photon_tet.hpp`, `tets.cpp`), Netzhelfer und Fassade
   (`scattuccino.tets`); Tests T6b (je Paket gleich dem Voxelgang, Glaskugel gegen geometrische Optik).
+- S6a: polarisierter Transport (`scattuccino.polarisation`: Mueller-Tabellen für Mie und Rayleigh,
+  Streuschritt, Schicht/Halbraum mit angepasster Brechzahl, Stokes im Laborsystem); Tests T7a, T7b.
