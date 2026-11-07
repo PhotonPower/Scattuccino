@@ -20,3 +20,4 @@ prüfen).
 | egan1979 | W. G. Egan, T. W. Hilgeman, Optical Properties of Inhomogeneous Materials (1979) – Näherung r_d(n), zitiert nach farrell1992 | Z | S2 Randkoeffizient A |
 | bevilacqua1999 | F. Bevilacqua, C. Depeursinge, „Monte Carlo study of diffuse reflectance at source–detector separations close to one transport mean free path“, J. Opt. Soc. Am. A 16 (1999) | Z | S3: MHG, γ |
 | reynolds1980 | L. O. Reynolds, N. J. McCormick, „Approximate two-parameter phase function for light scattering“, J. Opt. Soc. Am. 70 (1980) | Z | S3: Gegenbauer-Phasenfunktion |
+| mackintosh1989 | F. C. MacKintosh, J. X. Zhu, D. J. Pine, D. A. Weitz, „Polarization memory of multiply scattered light“, Phys. Rev. B 40 (1989) | Z | S6: Polarisationsgedächtnis |

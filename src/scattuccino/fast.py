@@ -27,6 +27,11 @@ except ImportError:
     CORE_AVAILABLE = False
 
 
+def core_module() -> Any:
+    """The compiled module `scattuccino._core`, or None without the core."""
+    return _core
+
+
 def cuda_available() -> bool:
     """True if the core was built with SCATTUCCINO_ENABLE_CUDA=ON and a GPU is present."""
     return bool(_core is not None and _core.HAS_CUDA and _core.cuda_device_count() > 0)
@@ -143,3 +148,64 @@ def simulate_voxels(
         seed,
         totals,
     )
+
+
+def simulate_polarised_slab(
+    d: float,
+    mua: float,
+    mus: float,
+    table: Any,
+    stokes_in: Any,
+    packets: int,
+    seed: int = 1,
+    n_slab: float = 1.0,
+    n_above: float = 1.0,
+    n_below: float = 1.0,
+    cos_incident: float = 1.0,
+    w_threshold: float = 1e-4,
+    roulette_m: float = 10.0,
+    threads: int | None = None,
+) -> Any:
+    """Polarised slab on the C++ core (S6c), same inputs and result as
+    `scattuccino.polarisation.simulate_polarised` and the same packets (counter-based random
+    numbers): a voxel grid of one voxel, laterally periodic and wide; d = np.inf → 10⁹ mm."""
+    from scattuccino.polarisation import PolarisedResult
+
+    if _core is None:
+        raise RuntimeError("scattuccino._core is not built")
+    depth = d if np.isfinite(d) else 1e9
+    inp = _core.VoxelInput()
+    inp.nx = inp.ny = inp.nz = 1
+    inp.dx = inp.dy = 1e9
+    inp.dz = depth
+    inp.labels = [0]
+    mat = _core.Material()
+    mat.mua, mat.mus, mat.n = mua, mus, n_slab
+    mat.phase = _phase(table.phase)
+    inp.materials = [mat]
+    inp.n_above, inp.n_below, inp.periodic = n_above, n_below, True
+    inp.cos_incident, inp.seed, inp.packets = cos_incident, seed, packets
+    inp.w_threshold, inp.roulette_m = w_threshold, roulette_m
+    inp.threads = threads if threads and threads > 0 else (os.cpu_count() or 1)
+    mt = _core.MuellerTable()
+    mt.mu, mt.m12, mt.m33, mt.m34 = (
+        list(np.asarray(a)) for a in (table.mu, table.m12, table.m33, table.m34)
+    )
+    mt.pure = bool(table.pure)
+    pin = _core.PolInput()
+    pin.voxels = inp
+    pin.mueller = [mt]
+    pin.stokes_in = [float(x) for x in stokes_in]
+    out = _core.simulate_voxels_polarised(pin)
+    order = np.argsort(out["id"], kind="stable")
+    res = PolarisedResult(
+        np.asarray(out["side"], dtype=np.int64)[order],
+        np.asarray(out["u"]).reshape(-1, 3)[order],
+        np.asarray(out["v"]).reshape(-1, 3)[order],
+        np.asarray(out["stokes"]).reshape(-1, 4)[order],
+        np.asarray(out["w"])[order] / packets,
+        np.asarray(out["scatterings"], dtype=np.int64)[order],
+        packets,
+    )
+    res.specular = (float(out["specular_r"]), np.asarray(out["specular_stokes"]))
+    return res

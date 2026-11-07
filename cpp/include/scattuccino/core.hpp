@@ -74,6 +74,30 @@ Setup prepare(const VoxelInput& in);
 
 VoxelOutput simulate_voxels(const VoxelInput& in);
 
+// Polarised transport (stage S6c): materials need a tabulated phase (S11) and Mueller ratios.
+struct MuellerTable {
+  std::vector<double> mu, m12, m33, m34;
+  bool pure = false;
+};
+
+struct PolInput {
+  VoxelInput voxels;                  // geometry, materials (phase must be tabulated), seed, …
+  std::vector<MuellerTable> mueller;  // per material
+  std::vector<double> stokes_in{1.0, 0.0, 0.0, 0.0};  // frame v = p̂ (x̂ at normal incidence)
+};
+
+struct PolOutput {
+  double specular_r = 0.0;
+  std::vector<double> specular_stokes;  // 4
+  std::vector<double> absorbed;
+  std::vector<std::int64_t> id;
+  std::vector<int> side;
+  std::vector<double> x, y, u, v, stokes, w;  // u, v: (exits, 3), stokes: (exits, 4)
+  std::vector<std::int64_t> scatterings;
+};
+
+PolOutput simulate_voxels_polarised(const PolInput& in);
+
 // CUDA backend (stage S5b), available if built with SCATTUCCINO_ENABLE_CUDA.
 int cuda_device_count();
 VoxelOutput simulate_voxels_cuda(const VoxelInput& in, int device);
