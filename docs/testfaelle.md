@@ -14,7 +14,8 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T3d | lateral integrierte Fluenz in 3–10 mm Tiefe; mittlere Laufzeit 4–7 mm | Diffusion (Dipol mit extrapolierter Grenze, Patterson) | S2 | ✅ |
 | T4 | Subdiffusive Reflexion: gleiches g, verschiedenes γ | Verhalten nach Bevilacqua/Depeursinge (nahe der Quelle stark, weit weg schwach abhängig) | S3 | ✅ |
 | T5 | Phasenfunktionen (HG, MHG, Gegenbauer, tabelliert, Mie): Normierung, Momente der Stichproben, geschlossene Formen; Mie-Grenzfälle; Monte Carlo gegen Adding-Doubling je Phasenfunktion | analytisch, Rayleigh, Extinktionsparadoxon, Adding-Doubling | S3 | ✅ (Querprobe CliffordBem offen) |
-| T6 | Voxel/Netz = Schichten | T1 | S4 | ○ |
+| T6a | Voxel: Verfeinerung und Stapelgröße ändern nichts (zählerbasierter Zufall je Paket); eine und zwei Schichten mit Brechzahlsprüngen und schrägem Einfall; offene Ränder; Einschluss | exakt; Adding-Doubling; Schichttransport; Energie | S4a | ✅ |
+| T6b | Tetraedernetz = Schichten, gekrümmte Grenzen | T1, Kugel/Zylinder | S4b | ○ |
 | T7 | Polarisation | Ramella-Roman, Prahl, Jacques (2005) | S6 | ○ |
 | T8 | Fluoreszenz | Fluoreszenz-Diffusion | S7 | ○ |
 | T9 | DCS/LSCI | Korrelationsdiffusion | S8 | ○ |
@@ -99,3 +100,22 @@ Extinktionsparadoxon Q_ext = 2,044 bei x = 300.
 R(ρ) zwischen 0 und 0,1 mm unterscheidet sich um den Faktor 5,2, zwischen 6 und 8 mm um 15 % – nahe
 der Quelle bestimmt γ, weit weg μs′ die Reflexion. Für Verfahren mit kleinem Faserabstand (DRS mit
 einer Faser, SFDI bei hohen Ortsfrequenzen) reicht μs′ deshalb nicht.
+
+## T6a: Voxelgeometrie (S4a)
+
+`scattuccino.voxels.simulate_voxels` (Voxelgang mit Fresnel an Flächen zwischen verschiedenen
+Brechzahlen, seitlich periodisch oder offen) mit **zählerbasierten Zufallszahlen**
+(`scattuccino.random`, SplitMix64: die k-te Zahl eines Pakets hängt nur von Seed, Paketnummer und
+k ab). Flächen zwischen gleichen Brechzahlen verbrauchen keine Zufallszahl.
+
+- **Invarianz:** dasselbe Medium als 1 Voxel und als 10 × 10 × 10 Voxel, in Stapeln von 20 000 bzw.
+  7 000 Paketen: R und T bitgleich (vorher mit gemeinsamem Generator nicht – die Reihenfolge der
+  Ziehungen hing von der Zahl der Flächendurchgänge ab). Das ist auch die Voraussetzung dafür, dass
+  der GPU-Kern (S5) dieselben Zahlen liefert.
+- **Eine Schicht** (d = 1 mm, μa = 0,1, μs = 10 /mm, g = 0,9, n = 1,4) in 4 × 4 × 10 Voxeln,
+  10⁵ Pakete: R_d 0,23214 / T_d 0,46170 gegen Adding-Doubling 0,23264 / 0,46123.
+- **Zwei Schichten** (n 1,37 über 1,52, Substrat 1,33, 29° Einfall): R 0,17829 / T 0,48270 gegen den
+  Schichttransport 0,17722 / 0,48557 (unabhängige Läufe, je 6·10⁴ Pakete).
+- **Offene Ränder und Einschluss:** Würfel 2,1 mm, absorbierende Kugel (r = 0,3 mm, μa = 2/mm,
+  „Gefäß“) 0,65 mm unter dem Eintrittspunkt: R sinkt von 0,092 auf 0,057, die Kugel absorbiert 41 %;
+  Energiebilanz mit seitlichen Verlusten auf 10⁻⁴.

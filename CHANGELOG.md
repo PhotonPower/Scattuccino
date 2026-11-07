@@ -19,3 +19,5 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - S3: Phasenfunktionen (`scattuccino.phase`: HG, MHG, Gegenbauer, tabelliert, Mie) mit Momenten und
   γ, δ; Mie-Reihe (`scattuccino.mie`); `Layer(phase=…)` in Transport und Adding-Doubling; Tests
   T4, T5.
+- S4a: Voxelgeometrie (`scattuccino.voxels`) mit zählerbasierten Zufallszahlen je Paket
+  (`scattuccino.random`); Tests T6a.
