@@ -26,7 +26,8 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T7d | Benchmarks von Ramella-Roman, Prahl, Jacques (2005) | Literatur (Volltext nötig) | S6 | ○ |
 | T8 | Fluoreszenz und Raman: ohne Streuung gegen geschlossene Lösung; Energie der Emission; vorwärts gegen adjungiert (Fluchtfunktion); räumlich versetzte Detektion (SORS) | E₂-Integral; exakt; unabhängige Läufe; Verhalten | S7a | ✅ |
 | T9 | Dynamik: Impulsübertrag (⟨1 − cos θ⟩ = 1 − g), DCS gegen Korrelationsdiffusion, Speckle-Kontrast gegen geschlossene Form, Tiefenempfindlichkeit in zwei Schichten | exakt; Boas & Yodh; Bandyopadhyay | S8a | ✅ |
-| T10 | OCT | Einfachstreuung, erweitertes Huygens-Fresnel | S9 | ○ |
+| T10a | OCT (Intensitätsmodell): Einfach-Rückstreuung gegen exaktes Integral; Kohärenz-Gating erhält das Signal; Anteil der Mehrfachstreuung und Beer-Gesetz des OCT | exakt; Integral; Verhalten | S9a | ✅ |
+| T10b | OCT mit Fokus (Fieldtracing), Übergang BWPM, erweitertes Huygens-Fresnel | Thrane, Schmitt; Querprobe BWPM | S9b/c | ○ |
 | T11 | Jacobi-Matrizen | finite Differenzen | S10 | ○ |
 | T12 | Phantome | Mikrosphären (Mie exakt), Lipidemulsionen (Literatur) | S11 | ○ |
 
@@ -313,3 +314,17 @@ Protokoll mit Impulsübertrag je Schicht Y_t = Σ(1 − cos θ) (`Protocol.momen
   K = 0,42427 auf 10⁻⁸.
 - **Zwei Schichten**, Bewegung nur unter 1 mm: g1(0,3 ms) bei 3–4 mm deutlich kleiner als bei
   0,5–1 mm – die Tiefenempfindlichkeit von DCS.
+
+## T10a: OCT-A-Scans aus dem Protokoll (S9a)
+
+`scattuccino.oct`: Detektor am Eintrittsort (Radius, Akzeptanzwinkel), Tiefe z = OPL/2 mit
+OPL = Σ nᵢLᵢ, Kohärenzfunktion (Gauß, FWHM l_c); mittleres, speckle-freies Signal wie im
+Monte-Carlo-OCT nach Yao & Wang (1999).
+
+- **Einfach-Rückstreuung** (Halbraum μa = 0,1, μs = 2 /mm, HG g = 0,3, n = 1, Akzeptanz 30°,
+  4·10⁵ Pakete): Pakete mit genau einer Streuung gegen das exakte Integral
+  ∫∫ μs e^(−μt z) p(−cos θ) e^(−μt z/cos θ) 2π sin θ dθ dz, gebinnt nach z(1 + 1/cos θ)/2 – alle
+  10 Tiefenbins innerhalb 1,3 σ.
+- **Kohärenz-Gating** (l_c = 10 µm) erhält das detektierte Signal auf 10⁻³.
+- **Mehrfachstreuung** (Detektor 1 mm, 30°): Anteil 20 % bei 0,05 mm Tiefe, 99 % bei 1,9 mm; der
+  Einfachstreu-Anteil fällt mit 2μt auf 1,5 % genau (Beer-Gesetz des OCT).
