@@ -4,6 +4,7 @@
 #include <pybind11/stl.h>
 
 #include "scattuccino/core.hpp"
+#include "scattuccino/tets.hpp"
 
 namespace py = pybind11;
 using namespace scattuccino;
@@ -93,6 +94,43 @@ PYBIND11_MODULE(_core, m) {
       o = simulate_voxels(in);
     }
     return to_dict(o);
+  });
+  py::class_<TetInput>(m, "TetInput")
+      .def(py::init<>())
+      .def_readwrite("nodes", &TetInput::nodes)
+      .def_readwrite("tets", &TetInput::tets)
+      .def_readwrite("labels", &TetInput::labels)
+      .def_readwrite("materials", &TetInput::materials)
+      .def_readwrite("n_top", &TetInput::n_top)
+      .def_readwrite("n_bottom", &TetInput::n_bottom)
+      .def_readwrite("n_side", &TetInput::n_side)
+      .def_readwrite("n_all", &TetInput::n_all)
+      .def_readwrite("entry_point", &TetInput::entry_point)
+      .def_readwrite("direction", &TetInput::direction)
+      .def_readwrite("seed", &TetInput::seed)
+      .def_readwrite("packets", &TetInput::packets)
+      .def_readwrite("w_threshold", &TetInput::w_threshold)
+      .def_readwrite("roulette_m", &TetInput::roulette_m)
+      .def_readwrite("record", &TetInput::record)
+      .def_readwrite("threads", &TetInput::threads);
+  m.def("simulate_tets", [](const TetInput& in) {
+    TetOutput o;
+    {
+      py::gil_scoped_release release;
+      o = simulate_tets(in);
+    }
+    py::dict d;
+    d["r_specular"] = o.r_specular;
+    d["entry_tet"] = o.entry_tet;
+    d["absorbed"] = arr(o.absorbed);
+    d["absorbed_tets"] = arr(o.absorbed_tets);
+    d["id"] = arr(o.id);
+    d["side"] = arr(o.side);
+    for (auto [k, v] : {std::pair{"x", &o.x}, {"y", &o.y}, {"z", &o.z}, {"ux", &o.ux}, {"uy", &o.uy},
+                        {"uz", &o.uz}, {"w", &o.w}, {"path", &o.path}})
+      d[k] = arr(*v);
+    d["scatterings"] = arr(o.scatterings);
+    return d;
   });
 #ifdef SCATTUCCINO_HAVE_CUDA
   m.attr("HAS_CUDA") = true;

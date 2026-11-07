@@ -26,3 +26,5 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - S5b: gemeinsamer Paketcode für CPU und GPU (`cpp/include/scattuccino/photon.hpp`), CUDA-Kernel
   (`cpp/src/core_cuda.cu`, ein Thread je Paket), Backend `cuda` in `scattuccino.fast`, Test T14 und
   Anleitung für den Server (`docs/agent-server-s5b.md`).
+- S4b: Tetraedernetze im C++-Kern (`photon_tet.hpp`, `tets.cpp`), Netzhelfer und Fassade
+  (`scattuccino.tets`); Tests T6b (je Paket gleich dem Voxelgang, Glaskugel gegen geometrische Optik).

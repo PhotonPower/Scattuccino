@@ -15,7 +15,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T4 | Subdiffusive Reflexion: gleiches g, verschiedenes γ | Verhalten nach Bevilacqua/Depeursinge (nahe der Quelle stark, weit weg schwach abhängig) | S3 | ✅ |
 | T5 | Phasenfunktionen (HG, MHG, Gegenbauer, tabelliert, Mie): Normierung, Momente der Stichproben, geschlossene Formen; Mie-Grenzfälle; Monte Carlo gegen Adding-Doubling je Phasenfunktion | analytisch, Rayleigh, Extinktionsparadoxon, Adding-Doubling | S3 | ✅ (Querprobe CliffordBem offen) |
 | T6a | Voxel: Verfeinerung und Stapelgröße ändern nichts (zählerbasierter Zufall je Paket); eine und zwei Schichten mit Brechzahlsprüngen und schrägem Einfall; offene Ränder; Einschluss | exakt; Adding-Doubling; Schichttransport; Energie | S4a | ✅ |
-| T6b | Tetraedernetz = Schichten, gekrümmte Grenzen | T1, Kugel/Zylinder | S4b | ○ |
+| T6b | Tetraedernetz: Voxelgeometrie als Tetraeder je Paket gleich dem Voxelgang; Glaskugel (gekrümmte Grenze) gegen geometrische Optik | Voxelgang (S4a); Fresnel, Snellius | S4b | ✅ |
 | T13 | C++-Kern (S5a) gegen die Python-Referenz, je Paket: Zufallszahlen, Phasenfunktionen, Austrittsseite, Gewicht, Zahl der Streuungen bitgleich; Orte, Richtungen, Wege bis auf gesammelte letzte Bits (≤ 7e−13); Threads ändern nichts | Python-Referenz | S5 | ✅ |
 | T14 | CUDA-Kern (S5b) gegen den CPU-Kern je Paket (≥ 99,9 % gleiche Entscheidungen), Summen auf 10⁻³ | CPU-Kern | S5 | ○ (Test auf dem Server) |
 | T7 | Polarisation | Ramella-Roman, Prahl, Jacques (2005) | S6 | ○ |
@@ -136,3 +136,18 @@ Reihenfolge der Ziehungen je Paket. Fassade `scattuccino.fast.simulate_voxels(�
 - Laufzeit (ein Kern): Würfel 21³ mit Einschluss, 2·10⁴ Pakete: Python 0,52 s, C++ 0,06 s
   (Faktor 9); schwach absorbierende Schicht (μa = 0,01/mm, μs = 10/mm, 20 mm), 2·10⁵ Pakete: 13 s
   (NumPy-Schichtcode: 80 s); mit OpenMP auf allen Kernen entsprechend schneller.
+
+## T6b: Tetraedernetze (S4b)
+
+Transport im C++-Kern (`cpp/include/scattuccino/photon_tet.hpp`, für CPU und später GPU),
+Nachbarn aus gemeinsamen Flächen, Fresnel und Brechung um die Flächennormale, Außenbrechzahl je
+Randfläche; Eintritt an einem Punkt einer Randfläche (beliebig geneigt). Abweichung vom Plan: ohne
+eigene Python-Fassung, weil die Prüfung gegen den Python-geprüften Voxelgang exakt ist.
+
+- **Voxel als Tetraeder** (11³ Voxel, je 6 Tetraeder nach Kuhn, 7 986 Tetraeder; Gewebe mit
+  kugelförmigem Einschluss anderer Brechzahl und MHG-Streuung; Substrat 1,33): für alle 2·10⁴ Pakete
+  dieselben Gewichte und Streuzahlen wie der Voxelgang, Orte und Richtungen auf 10⁻¹⁴, Absorption
+  je Material gleich.
+- **Glaskugel** (n = 1,5, Ikosaeder Stufe 5, 20 480 Tetraeder), Strahl unter 30,4° zur Facette:
+  spiegelnde Reflexion = Fresnel (exakt), Anteil in der Richtung des direkt durchgehenden Strahls
+  (Ablenkung 2(θᵢ − θₜ)) 0,9188 gegen (1 − R₁)(1 − R₂) = 0,9185; Energie auf 10⁻¹².
