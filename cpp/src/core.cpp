@@ -95,7 +95,7 @@ Setup prepare(const VoxelInput& in) {
 }
 
 namespace {
-template <class Real, class Pos>
+template <class Real>
 VoxelOutput run(const VoxelInput& in) {
   const Setup st = prepare(in);
   const Views<Real> views = make_views<Real>(in);
@@ -127,7 +127,7 @@ VoxelOutput run(const VoxelInput& in) {
         o.absorbed_voxels[(static_cast<std::size_t>(i) * in.ny + j) * in.nz + k] += dw;
       };
       auto add_path = [&](int mat, double d) { path[static_cast<std::size_t>(mat)] += d; };
-      const photon::Exit e = photon::trace<Real, Pos>(geo, in.seed, static_cast<std::uint64_t>(id), st.sin_t0,
+      const photon::Exit e = photon::trace<Real>(geo, in.seed, static_cast<std::uint64_t>(id), st.sin_t0,
                                            st.cos_t0, 1.0 - st.r_specular, st.i0, st.j0, deposit, add_path);
       if (e.side == 2) {  // roulette
         ++o.n_roulette;
@@ -183,13 +183,11 @@ VoxelOutput run(const VoxelInput& in) {
 VoxelOutput simulate_voxels(const VoxelInput& in) {
   switch (in.precision) {
     case 0:
-      return run<double, double>(in);
+      return run<double>(in);
     case 1:
-      return run<float, float>(in);
-    case 2:
-      return run<float, double>(in);
+      return run<float>(in);
     default:
-      throw std::invalid_argument("precision must be 0 (double), 1 or 2 (single)");
+      throw std::invalid_argument("precision must be 0 (double) or 1 (single)");
   }
 }
 

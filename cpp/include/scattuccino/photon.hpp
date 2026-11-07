@@ -24,9 +24,10 @@ constexpr double PI = 3.141592653589793;
 // Precision of the packet code. Real (double or float): direction, step length, distances to the
 // voxel faces, phase function, Fresnel, scattering. Always double: the packet weight, deposited
 // energy, all sums, the protocol values and the random number itself (53 bit; converted to Real
-// only when used, so the random stream of a packet is the same in both precisions). Pos is the
-// type of the position (Real, or double with Real = float). With Real = double all functions are
-// the former double code, bit for bit.
+// only when used, so the random stream of a packet is the same in both precisions). The position
+// is Real too (measured against a double position with float direction: same statistics, 2.3 to
+// 2.6 times slower on the GPU). With Real = double all functions are the former double code, bit
+// for bit.
 template <class R> constexpr bool is_single = std::is_same_v<R, float>;
 
 SCAT_HD inline double dmin(double a, double b) { return a < b ? a : b; }
@@ -222,11 +223,11 @@ struct Exit {
 };
 
 // Runs one packet; Deposit(material, i, j, k, dw) and Path(material, dist) are callables.
-template <class Real, class Pos, class Deposit, class Path>
+template <class Real, class Deposit, class Path>
 SCAT_HD Exit trace(const Geometry<Real>& g, std::uint64_t seed, std::uint64_t id, double sin_t0,
                    double cos_t0, double w0, int i0, int j0, Deposit deposit, Path add_path) {
   Rng rng(seed, id);
-  Pos pos[3] = {0, 0, 0};
+  Real pos[3] = {0, 0, 0};
   Real u[3] = {static_cast<Real>(sin_t0), 0, static_cast<Real>(cos_t0)};
   int idx[3] = {i0, j0, 0};
   const int dims[3] = {g.nx, g.ny, g.nz};
@@ -241,10 +242,10 @@ SCAT_HD Exit trace(const Geometry<Real>& g, std::uint64_t seed, std::uint64_t id
     const Real step = mt > 0 ? s_left / mt : infinity<Real>();
     Real d_ax[3];
     for (int a = 0; a < 3; ++a) {
-      const Pos f = static_cast<Pos>(g.lo[a]) + idx[a] * static_cast<Pos>(g.size[a]);
+      const Real f = static_cast<Real>(g.lo[a]) + idx[a] * static_cast<Real>(g.size[a]);
       const Real ua = u[a];
       Real d;
-      if (ua > 0) d = static_cast<Real>((f + static_cast<Pos>(g.size[a])) - pos[a]) / ua;
+      if (ua > 0) d = static_cast<Real>((f + static_cast<Real>(g.size[a])) - pos[a]) / ua;
       else if (ua < 0) d = static_cast<Real>(f - pos[a]) / ua;
       else d = infinity<Real>();
       d_ax[a] = rmax(d, Real(0));
@@ -255,7 +256,7 @@ SCAT_HD Exit trace(const Geometry<Real>& g, std::uint64_t seed, std::uint64_t id
     const Real d_face = d_ax[axis];
     const bool hit = d_face <= step;
     const Real dist = hit ? d_face : step;
-    for (int a = 0; a < 3; ++a) pos[a] += static_cast<Pos>(u[a]) * static_cast<Pos>(dist);
+    for (int a = 0; a < 3; ++a) pos[a] += static_cast<Real>(u[a]) * static_cast<Real>(dist);
     add_path(mat, dist);
     zmax = dmax(zmax, static_cast<double>(pos[2]));
     s_left = hit ? s_left - d_face * mt : Real(0);
@@ -264,8 +265,8 @@ SCAT_HD Exit trace(const Geometry<Real>& g, std::uint64_t seed, std::uint64_t id
       if constexpr (is_single<Real>) {
         // the packet is on the face it crosses: remove the rounding of the step (the voxel
         // index then always belongs to the position)
-        pos[axis] = static_cast<Pos>(g.lo[axis]) +
-                    (idx[axis] + (direction > 0 ? 1 : 0)) * static_cast<Pos>(g.size[axis]);
+        pos[axis] = static_cast<Real>(g.lo[axis]) +
+                    (idx[axis] + (direction > 0 ? 1 : 0)) * static_cast<Real>(g.size[axis]);
       }
       int nb[3] = {idx[0], idx[1], idx[2]};
       nb[axis] += direction;
@@ -274,7 +275,7 @@ SCAT_HD Exit trace(const Geometry<Real>& g, std::uint64_t seed, std::uint64_t id
       bool out_lat = axis < 2 && (nb[axis] < 0 || nb[axis] >= dims[axis]);
       if (g.periodic && out_lat) {
         nb[axis] = ((nb[axis] % dims[axis]) + dims[axis]) % dims[axis];
-        pos[axis] -= direction * dims[axis] * static_cast<Pos>(g.size[axis]);
+        pos[axis] -= direction * dims[axis] * static_cast<Real>(g.size[axis]);
         out_lat = false;
       }
       const bool inside = !(out_top || out_bot || out_lat);

@@ -45,7 +45,7 @@ struct VoxelInput {
   double w_threshold = 1e-4, roulette_m = 10.0;
   bool record = true;  // protocol of the leaving packets
   bool score_voxels = true;  // absorbed power per voxel (the GPU skips the atomics if false)
-  // 0 double (reference); 1 single, position in float (A); 2 single, position in double (B)
+  // 0 double (reference); 1 single (float for direction, steps, position, phase function)
   int precision = 0;
   int threads = 1;
 };

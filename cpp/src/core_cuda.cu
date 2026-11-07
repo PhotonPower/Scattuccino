@@ -48,7 +48,7 @@ constexpr int kLocalMaterials = 16;  // per-thread accumulators; more materials 
 // Persistent threads: every thread takes the next packet from a global counter until all are
 // done (no idle warps at the end of a launch with long-lived packets). Absorption per material is
 // summed in registers and flushed once per packet; the voxel grid is scored only on request.
-template <class Real, class Pos>
+template <class Real>
 __global__ void k_trace(photon::Geometry<Real> geo, std::uint64_t seed, long long first, long long count,
                         unsigned long long* next, double sin_t0, double cos_t0, double w0, int i0,
                         int j0, int nm, bool score_voxels, double* absorbed, double* absorbed_voxels,
@@ -70,7 +70,7 @@ __global__ void k_trace(photon::Geometry<Real> geo, std::uint64_t seed, long lon
     auto add_path = [&](int mat, double d) {
       if (my_path) my_path[mat] += d;
     };
-    const photon::Exit e = photon::trace<Real, Pos>(geo, seed, static_cast<std::uint64_t>(id), sin_t0, cos_t0, w0, i0,
+    const photon::Exit e = photon::trace<Real>(geo, seed, static_cast<std::uint64_t>(id), sin_t0, cos_t0, w0, i0,
                                          j0, deposit, add_path);
     for (int k = 0; k < kLocalMaterials && k < nm; ++k)
       if (acc[k] != 0.0) atomicAdd(&absorbed[k], acc[k]);
@@ -102,7 +102,7 @@ int cuda_device_count() {
 
 namespace {
 
-template <class Real, class Pos>
+template <class Real>
 VoxelOutput run_cuda(const VoxelInput& in, int device) {
   check(cudaSetDevice(device), "cudaSetDevice");
   const Setup st = prepare(in);
@@ -174,7 +174,7 @@ VoxelOutput run_cuda(const VoxelInput& in, int device) {
     const int block = 128;
     const long long wanted = (count + block - 1) / block;
     const unsigned grid = static_cast<unsigned>(std::min<long long>(wanted, static_cast<long long>(sms) * 16));
-    k_trace<Real, Pos><<<grid, block>>>(geo, in.seed, first, count, d_next.ptr, st.sin_t0, st.cos_t0, 1.0 - st.r_specular,
+    k_trace<Real><<<grid, block>>>(geo, in.seed, first, count, d_next.ptr, st.sin_t0, st.cos_t0, 1.0 - st.r_specular,
                              st.i0, st.j0, static_cast<int>(nm), in.score_voxels, d_abs.ptr, d_vox.ptr,
                              d_sums.ptr, d_counts.ptr, in.record, in.record ? d_exits->ptr : nullptr,
                              in.record ? d_paths->ptr : nullptr);
@@ -228,13 +228,11 @@ VoxelOutput run_cuda(const VoxelInput& in, int device) {
 VoxelOutput simulate_voxels_cuda(const VoxelInput& in, int device) {
   switch (in.precision) {
     case 0:
-      return run_cuda<double, double>(in, device);
+      return run_cuda<double>(in, device);
     case 1:
-      return run_cuda<float, float>(in, device);
-    case 2:
-      return run_cuda<float, double>(in, device);
+      return run_cuda<float>(in, device);
     default:
-      throw std::invalid_argument("precision must be 0 (double), 1 or 2 (single)");
+      throw std::invalid_argument("precision must be 0 (double) or 1 (single)");
   }
 }
 
