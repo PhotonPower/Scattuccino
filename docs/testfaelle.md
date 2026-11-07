@@ -15,11 +15,15 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T4 | Subdiffusive Reflexion: gleiches g, verschiedenes γ | Verhalten nach Bevilacqua/Depeursinge (nahe der Quelle stark, weit weg schwach abhängig) | S3 | ✅ |
 | T5 | Phasenfunktionen (HG, MHG, Gegenbauer, tabelliert, Mie): Normierung, Momente der Stichproben, geschlossene Formen; Mie-Grenzfälle; Monte Carlo gegen Adding-Doubling je Phasenfunktion | analytisch, Rayleigh, Extinktionsparadoxon, Adding-Doubling | S3 | ✅ (Querprobe CliffordBem offen) |
 | T6a | Voxel: Verfeinerung und Stapelgröße ändern nichts (zählerbasierter Zufall je Paket); eine und zwei Schichten mit Brechzahlsprüngen und schrägem Einfall; offene Ränder; Einschluss | exakt; Adding-Doubling; Schichttransport; Energie | S4a | ✅ |
-| T6b | Tetraedernetz = Schichten, gekrümmte Grenzen | T1, Kugel/Zylinder | S4b | ○ |
+| T6b | Tetraedernetz: Voxelgeometrie als Tetraeder je Paket gleich dem Voxelgang; Glaskugel (gekrümmte Grenze) gegen geometrische Optik | Voxelgang (S4a); Fresnel, Snellius | S4b | ✅ |
 | T13 | C++-Kern (S5a) gegen die Python-Referenz, je Paket: Zufallszahlen, Phasenfunktionen, Austrittsseite, Gewicht, Zahl der Streuungen bitgleich; Orte, Richtungen, Wege bis auf gesammelte letzte Bits (≤ 7e−13); Threads ändern nichts | Python-Referenz | S5 | ✅ |
 | T14 | CUDA-Kern (S5b) gegen den CPU-Kern je Paket (≥ 99,9 % gleiche Entscheidungen), Summen auf 10⁻³; ohne Protokoll/Voxelwertung gleich (S5c) | CPU-Kern | S5 | ✅ S5b und S5c auf dem Server (2026-11-07) |
 | T15 | FP32-Option (S5d): single gegen double statistisch (4σ), Energie und Paketzahl in single, GPU gegen CPU je Paket in single; double bitgleich wie T13 | double (Python-Referenz), CPU single | S5 | ✅ auf dem Server (2026-11-07) |
-| T7 | Polarisation | Ramella-Roman, Prahl, Jacques (2005) | S6 | ○ |
+| T7a | Polarisation, Streuschritt: Stokes aus Feldern (Mie über S1, S2; Rayleigh über das Dipolfeld) | unabhängige Feldrechnung | S6a | ✅ |
+| T7b | Polarisation im Transport: unpolarisiert = skalar; reine Zustände bleiben rein; Polarisationsgedächtnis (kleine/große Kugeln, linear/zirkular) | skalarer Transport; exakt; MacKintosh et al. (1989) | S6a | ✅ |
+| T7c | Fresnel-Mueller an Brechzahlsprüngen: Fresnel-Rhombus, Brewster, nicht streuende Schicht gegen inkohärente Summe der Wege, Energie | Optik-Lehrbuch; geschlossene Summe | S6b | ✅ |
+| T7e | Polarisation im C++-Kern je Paket gleich der Python-Referenz (angepasst; Brechzahlsprünge, schräg, elliptisch; Rayleigh-Halbraum) | Python-Referenz | S6c | ✅ |
+| T7d | Benchmarks von Ramella-Roman, Prahl, Jacques (2005) | Literatur (Volltext nötig) | S6 | ○ |
 | T8 | Fluoreszenz | Fluoreszenz-Diffusion | S7 | ○ |
 | T9 | DCS/LSCI | Korrelationsdiffusion | S8 | ○ |
 | T10 | OCT | Einfachstreuung, erweitertes Huygens-Fresnel | S9 | ○ |
@@ -208,3 +212,72 @@ bestehen T15; A ist auf der GPU 2,3- bis 2,6-mal schneller → A im Code, B entf
 R (Würfel) = 0,220912 ± 0,000114 in double, 0,220911 in single; R (schwach absorbierend) =
 0,603645 ± 0,000112 in double, 0,603643–0,603644 in single. `--fmad=true` nur für float
 (Messvariante, nicht im Code): 1,3–1,5 s bzw. 4,7–4,8 s, keine Wirkung.
+## T6b: Tetraedernetze (S4b)
+
+Transport im C++-Kern (`cpp/include/scattuccino/photon_tet.hpp`, für CPU und später GPU),
+Nachbarn aus gemeinsamen Flächen, Fresnel und Brechung um die Flächennormale, Außenbrechzahl je
+Randfläche; Eintritt an einem Punkt einer Randfläche (beliebig geneigt). Abweichung vom Plan: ohne
+eigene Python-Fassung, weil die Prüfung gegen den Python-geprüften Voxelgang exakt ist.
+
+- **Voxel als Tetraeder** (11³ Voxel, je 6 Tetraeder nach Kuhn, 7 986 Tetraeder; Gewebe mit
+  kugelförmigem Einschluss anderer Brechzahl und MHG-Streuung; Substrat 1,33): für alle 2·10⁴ Pakete
+  dieselben Gewichte und Streuzahlen wie der Voxelgang, Orte und Richtungen auf 10⁻¹⁴, Absorption
+  je Material gleich.
+- **Glaskugel** (n = 1,5, Ikosaeder Stufe 5, 20 480 Tetraeder), Strahl unter 30,4° zur Facette:
+  spiegelnde Reflexion = Fresnel (exakt), Anteil in der Richtung des direkt durchgehenden Strahls
+  (Ablenkung 2(θᵢ − θₜ)) 0,9188 gegen (1 − R₁)(1 − R₂) = 0,9185; Energie auf 10⁻¹².
+
+## T7a, T7b: Polarisation (S6a)
+
+`scattuccino.polarisation`: Stokes-Vektoren im mitgeführten Bezugssystem (u, v, w = u × v),
+Mueller-Matrix der Kugel aus S1, S2 (Bohren & Huffman), θ aus S11, φ durch Verwerfen aus
+S11 + S12 (Q cos 2φ + U sin 2φ); Schichten mit angepasster Brechzahl (Fresnel-Mueller folgt in
+S6b). Python-Referenz; der C++-Kern folgt.
+
+- **Streuschritt gegen Felder** (200 zufällige Richtungen, Bezugssysteme, Polarisationen und
+  Winkel): Mie über die Amplituden S1, S2 und Rayleigh über das Dipolfeld −û′ × (û′ × E) auf 10⁻⁷
+  (Interpolation der Tabelle) – Drehung des Bezugssystems, Mueller-Matrix und Vorzeichen von V
+  stimmen.
+- **Unpolarisiert** (Mie, 1 µm Polystyrol in Wasser): R 0,2006 / T 0,6373 gegen den skalaren
+  Transport 0,2018 / 0,6363 (unabhängige Läufe).
+- **Reine Zustände bleiben rein** auf 10⁻¹⁴ (nach Wiederherstellen von m₁₂² + m₃₃² + m₃₄² = 1
+  in der interpolierten Tabelle; vorher 2,6·10⁻⁴).
+- **Polarisationsgedächtnis** in Rückstreuung aus dem Halbraum:
+
+  | Kugeln | g | linear: DOP_lin | zirkular: DOP_zirk |
+  | --- | --- | --- | --- |
+  | x = 0,5 | 0,04 | 0,31 | −0,20 (Helizität kehrt um) |
+  | x = 10 | 0,93 | 0,03 | +0,33 (Helizität bleibt) |
+
+  wie bei MacKintosh et al. (1989): kleine Streuer erhalten lineare, große zirkulare Polarisation.
+
+## T7c: Fresnel an Brechzahlsprüngen, polarisiert (S6b)
+
+`scattuccino.polarisation.interface`: Bezugssystem in die Einfallsebene drehen (p̂ = ŝ × û),
+reflektieren mit der Wahrscheinlichkeit R(S) = ½(|r_p|² + |r_s|²) + ½(|r_p|² − |r_s|²) Q/I,
+Stokes mit den komplexen Fresnel-Amplituden (auch Totalreflexion mit Phase).
+
+- **Fresnel-Rhombus:** zwei Totalreflexionen bei 54,6° in Glas (n = 1,51) machen aus linearem 45°-Licht
+  zirkulares: V = 0,9999999.
+- **Brewster:** spiegelnde Reflexion von unpolarisiertem Licht bei θ_B (n = 1,33) ist rein
+  s-polarisiert: S = (1, −1, 0, 0) auf 10⁻¹².
+- **Nicht streuende Schicht** (n = 1,5, 50°, μa = 0,3/mm, d = 1 mm, linear 45°): Monte Carlo gegen
+  die inkohärente Summe über alle Wege (jeder Weg behält seine p-s-Kohärenz), 2·10⁵ Pakete:
+  T = (0,6299; 0,0705; 0,6240; 0) gegen (0,6303; 0,0706; 0,6245; 0), R_d = (0,0232; −0,0215;
+  −0,0085; 0) gegen (0,0229; −0,0213; −0,0084; 0), alle Komponenten innerhalb 4 σ.
+- **Energie** mit Streuung, zwei Brechzahlsprüngen und schrägem Einfall: 1 auf 10⁻¹²; kein Paket
+  über dem Polarisationsgrad 1.
+
+## T7e: Polarisation im C++-Kern (S6c)
+
+`cpp/include/scattuccino/photon_pol.hpp` spiegelt `scattuccino.polarisation` Zeile für Zeile
+(Streuschritt mit Verwerfen, Drehung des Bezugssystems, Mueller-Verhältnisse wie `numpy.interp`
+samt Wiederherstellen der Reinheit, Fresnel-Amplituden mit Totalreflexion, polarisierter Eintritt)
+und läuft im Voxelgang; die Python-Referenz nutzt dafür jetzt ebenfalls die zählerbasierten
+Zufallszahlen je Paket. Fassade `scattuccino.fast.simulate_polarised_slab`.
+
+Drei Fälle, je 4 000 Pakete (angepasst/normal/linear; Brechzahlsprünge 1,4 und 1,5, 34°,
+elliptisch; Rayleigh-Halbraum mit Brechzahlsprung, zirkular): Austrittsseite, Zahl der Streuungen
+und Gewicht **bitgleich**; Stokes-Vektoren, Richtungen und Bezugsvektoren gleich bis 2·10⁻¹⁴
+(komplexe Division in libstdc++ gegen NumPy), im angepassten Fall bitgleich. Ein Kern: 5–7-mal
+schneller als die vektorisierte Python-Referenz, mit OpenMP über alle Kerne.

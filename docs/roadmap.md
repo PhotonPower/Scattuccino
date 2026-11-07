@@ -34,9 +34,9 @@ Volumenausgaben (Fluenz, absorbierte Energie) bedienen Photoakustik und Therapie
 | **S1 CPU-Referenz in Schichten** | Monte Carlo in Python/NumPy (Schichten, Fresnel an Grenzen, Henyey-Greenstein, Gewichtsverfahren mit Russischem Roulette); **eigene** unabhängige Referenz: Adding-Doubling (van de Hulst, Prahl) | Reflexion/Transmission gegen Adding-Doubling und veröffentlichte MCML-Tabellen, Energieerhaltung |
 | **S2 Photonenprotokoll und Detektoren** | ortsaufgelöste Reflexion, Zeit- und Frequenzbereich, Teilweglängen, Fluenz und absorbierte Energie | Diffusionslösungen (Farrell, Kienle-Patterson für Schichten), Zeitbereich (Patterson), Fluenz gegen Diffusion |
 | **S3 Phasenfunktionen und Mikrostruktur** | modifizierte HG, Gegenbauer, tabellierte Phasenfunktionen, Mie (eigene Reihe und CliffordBem), anisotrope Zylinderstreuer; Parameter γ, δ für den subdiffusiven Bereich | Mie-Momente, Querprobe CliffordBem, subdiffusive Reflexion gegen Literatur |
-| **S4 Geometrie** | S4a Voxel (✅, zählerbasierter Zufall je Paket); S4b Tetraedernetze (aus Nurbforge/gmsh-Netzen der Fusion), gekrümmte Grenzen mit Brechzahlsprung | Schichtfall auf Voxeln/Netz = S1; analytische Einschlüsse (Störungstheorie) |
-| **S5 C++/CUDA-Kern** | wie BWPM B4: Python-Referenz bleibt, C++-Kern mit CPU-Pfad (S5a ✅) und CUDA (S5b ✅, S5c ✅ auf dem Server), FP32-Option (S5d, Auftrag `docs/agent-server-s5d.md`), Sollwertdateien | je Paket gleich der Python-Referenz (T13); Laufzeit |
-| **S6 Polarisation** | Stokes-Vektoren, Mueller-Matrizen je Streuung (Konventionen von `rtt-polar`), Meridianebene | Benchmarks von Ramella-Roman, Prahl, Jacques; Mie-Mueller |
+| **S4 Geometrie** | S4a Voxel (✅, zählerbasierter Zufall je Paket); S4b Tetraedernetze (✅, im C++-Kern; Netze aus Nurbforge/gmsh folgen mit der Fusion), gekrümmte Grenzen mit Brechzahlsprung | Schichtfall auf Voxeln/Netz = S1; analytische Einschlüsse (Störungstheorie) |
+| **S5 C++/CUDA-Kern** | wie BWPM B4: Python-Referenz bleibt, C++-Kern mit CPU-Pfad (S5a ✅), CUDA (S5b ✅, S5c ✅) und FP32-Option (S5d ✅, GPU 21–36× schneller als 32 CPU-Kerne), Sollwertdateien | je Paket gleich der Python-Referenz (T13); Laufzeit |
+| **S6 Polarisation** | S6a ✅ Stokes-Vektoren, Mueller-Matrizen je Streuung, mitgeführtes Bezugssystem (Python-Referenz); S6b ✅ Fresnel-Mueller an Brechzahlsprüngen; S6c ✅ C++-Kern (CPU, Voxel); offen: GPU (mit FP32), Konventionen von `rtt-polar`, Benchmarks Ramella-Roman | Benchmarks von Ramella-Roman, Prahl, Jacques; Mie-Mueller |
 | **S7 Fluoreszenz und Raman** | sekundäre Quellen aus der Absorption, Quantenausbeute, Emissionsspektren, Reabsorption | Fluoreszenz-Diffusionslösungen, Energiebilanz |
 | **S8 Dynamik** | Impulsübertrag je Gewebe → g₁(τ), g₂, Speckle-Kontrast, Dopplerspektrum (Brownsche und gerichtete Bewegung) | Korrelationsdiffusion (Boas, Yodh) |
 | **S9 OCT und Fokus** | weglängenaufgelöste Rückstreuung, Kohärenz-Gating, Fokus aus Fieldtracing, erweitertes Huygens-Fresnel, Speckle; Hybrid mit BWPM in den ersten Weglängen | Einfachstreumodell und EHF (Thrane, Schmitt), Querprobe BWPM im schwach streuenden Grenzfall |
@@ -56,4 +56,5 @@ OCT-Sonde, die in ein Gewebephantom abbildet (Druckmodell → Sonde → Gewebe �
 | D3 | Polarisation | Stokes-Vektor von Anfang an im Protokoll (abschaltbar), Rechnung ab S6 |
 | D4 | Vergleich mit GPL-Codes | nur über veröffentlichte Ergebnisse, kein Code |
 | D5 | Diffusion, Akustik, Wärme | hp-FEM um skalare H1-Probleme erweitern (Vorschlag dort) statt eigener FEM |
+| D7 | FP32 im GPU-Kern | freigegeben 2026-11-07: FP64 Standard und Referenz, FP32 als `precision="single"`, Abnahme statistisch |
 | D6 | Phantome und Messdaten | Validierung zunächst an Literatur; eigene Phantommessungen, sobald vorhanden |

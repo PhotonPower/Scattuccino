@@ -32,3 +32,11 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - S5d: FP32-Option `precision="single"` für CPU- und CUDA-Kern (Paketcode als Template auf die
   Genauigkeit, double bitgleich wie zuvor), Zähler `n_exit`/`n_roulette`, Test T15; auf der
   GPU 11- bis 13-mal schneller als in double.
+- S4b: Tetraedernetze im C++-Kern (`photon_tet.hpp`, `tets.cpp`), Netzhelfer und Fassade
+  (`scattuccino.tets`); Tests T6b (je Paket gleich dem Voxelgang, Glaskugel gegen geometrische Optik).
+- S6a: polarisierter Transport (`scattuccino.polarisation`: Mueller-Tabellen für Mie und Rayleigh,
+  Streuschritt, Schicht/Halbraum mit angepasster Brechzahl, Stokes im Laborsystem); Tests T7a, T7b.
+- S6b: polarisierte Fresnel-Ereignisse an Brechzahlsprüngen (`interface`, `fresnel_amplitudes`), Schicht
+  mit Brechzahlen und schrägem Einfall in `simulate_polarised`; Tests T7c. D7 (FP32-Option) freigegeben.
+- S6c: Polarisation im C++-Kern (`photon_pol.hpp`, `simulate_voxels_polarised`), Python-Referenz auf
+  zählerbasierten Zufall umgestellt, Fassade `fast.simulate_polarised_slab`; Test T7e (je Paket gleich).
