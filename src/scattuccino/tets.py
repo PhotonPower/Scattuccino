@@ -135,9 +135,9 @@ def simulate_tets(
     n_side (else, default: index-matched to the material) or n_all for all."""
     from scattuccino import fast
 
-    if fast._core is None:
+    core = fast.core_module()
+    if core is None:
         raise RuntimeError("tetrahedral transport needs scattuccino._core")
-    core = fast._core
     inp = core.TetInput()
     inp.nodes = np.asarray(mesh.nodes, dtype=np.float64).ravel().tolist()
     inp.tets = np.asarray(mesh.tets, dtype=np.int32).ravel().tolist()

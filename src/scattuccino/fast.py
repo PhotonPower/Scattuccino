@@ -27,6 +27,11 @@ except ImportError:
     CORE_AVAILABLE = False
 
 
+def core_module() -> Any:
+    """The compiled module `scattuccino._core`, or None without the core."""
+    return _core
+
+
 def cuda_available() -> bool:
     """True if the core was built with SCATTUCCINO_ENABLE_CUDA=ON and a GPU is present."""
     return bool(_core is not None and _core.HAS_CUDA and _core.cuda_device_count() > 0)

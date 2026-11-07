@@ -74,11 +74,11 @@ def test_glass_sphere_against_geometric_optics() -> None:
     mesh.nodes = mesh.nodes - centre[k]  # the beam enters at the centre of that facet
     p, info = simulate_tets(mesh, (Layer(0.0, 0.0, 0.0, 0.0, 1.5),), 20_000, seed=1, n_all=1.0)
     r1 = fresnel_unpolarised(1.0, 1.5, np.array([np.cos(theta_i)]))[0][0]
-    assert abs(info["r_specular"] - r1) < 1e-15  # type: ignore[operator]
+    assert abs(info["r_specular"] - r1) < 1e-15
     theta_t = float(np.arcsin(np.sin(theta_i) / 1.5))
     r2 = fresnel_unpolarised(1.5, 1.0, np.array([np.cos(theta_t)]))[0][0]
     angle = np.arccos(np.clip(p.uz, -1, 1))
     direct = np.abs(angle - 2 * (theta_i - theta_t)) < 0.05
     expected = (1 - r1) * (1 - r2)
     assert abs(p.weight[direct].sum() - expected) < 4 * np.sqrt(expected * (1 - expected) / 20_000)
-    assert abs(p.weight.sum() + info["r_specular"] - 1) < 1e-12  # type: ignore[operator]
+    assert abs(p.weight.sum() + info["r_specular"] - 1) < 1e-12
