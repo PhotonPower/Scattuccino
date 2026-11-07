@@ -81,6 +81,7 @@ class Sources:
     z: FloatArray
     layer: IntArray
     weight: FloatArray
+    direction: FloatArray | None = None  # (N, 3) unit vectors; None = isotropic (S9b: hand-off)
 
 
 @dataclass
@@ -180,10 +181,14 @@ def simulate(
             )
             layer = sources.layer[sl].astype(np.int64)
             w = sources.weight[sl].astype(np.float64) * packets  # undone by the final division
-            cz = 2 * rng.random(m) - 1
-            ph = 2 * np.pi * rng.random(m)
-            sz = np.sqrt(1 - cz * cz)
-            ux, uy, uz = sz * np.cos(ph), sz * np.sin(ph), cz
+            if sources.direction is None:
+                cz = 2 * rng.random(m) - 1
+                ph = 2 * np.pi * rng.random(m)
+                sz = np.sqrt(1 - cz * cz)
+                ux, uy, uz = sz * np.cos(ph), sz * np.sin(ph), cz
+            else:
+                dvec = np.asarray(sources.direction[sl], dtype=np.float64)
+                ux, uy, uz = dvec[:, 0].copy(), dvec[:, 1].copy(), dvec[:, 2].copy()
         alive = np.ones(m, dtype=bool)
         path = np.zeros((m, nl))
         mom = np.zeros((m, nl))

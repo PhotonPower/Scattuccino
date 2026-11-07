@@ -28,6 +28,8 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T9 | Dynamik: Impulsübertrag (⟨1 − cos θ⟩ = 1 − g), DCS gegen Korrelationsdiffusion, Speckle-Kontrast gegen geschlossene Form, Tiefenempfindlichkeit in zwei Schichten | exakt; Boas & Yodh; Bandyopadhyay | S8a | ✅ |
 | T10a | OCT (Intensitätsmodell): Einfach-Rückstreuung gegen exaktes Integral; Kohärenz-Gating erhält das Signal; Anteil der Mehrfachstreuung und Beer-Gesetz des OCT | exakt; Integral; Verhalten | S9a | ✅ |
 | T10b | OCT mit Fokus (Fieldtracing), Übergang BWPM, erweitertes Huygens-Fresnel | Thrane, Schmitt; Querprobe BWPM | S9b/c | ○ |
+| T17a | Hybrid-OCT, Kette: Fokus des Gauß-Strahls, Modenkopplung eines Strahls, Leistung an der Übergabe | analytisch | S9b-3a | ✅ |
+| T17 | Hybrid-OCT: Unabhängigkeit von z_h, gegen erweitertes Huygens-Fresnel | S9b-4 (Next-Event-Schätzer), S9c | ○ |
 | T16 | Zufallsmedium (Whittle-Matérn): Born gegen geschlossene Form, Feldstatistik, eine BWPM-Realisierung reproduziert Born-μs und g | exakt; Statistik; Born | S9b-2 | ✅ (Kalibrierläufe auf dem Server offen) |
 | T11 | Jacobi-Matrizen | finite Differenzen | S10 | ○ |
 | T12 | Phantome | Mikrosphären (Mie exakt), Lipidemulsionen (Literatur) | S11 | ○ |
@@ -344,3 +346,19 @@ Gaußsches Zufallsfeld auf periodischem Gitter, Quantisierung für BWPM,
   0,942 gegen Born 0,946, Leistung auf 0,5 % erhalten. Bei kleinem lateralem Feld bleibt ein
   kohärenter Boden von einigen Prozent (endlich viele Speckles); die Kalibrierläufe auf dem Server
   (`docs/agent-server-s9b2.md`) nutzen 1024² und realistische μs.
+
+## T17a: Hybrid-OCT-Kette (S9b-3a)
+
+`scattuccino.hybrid`: Gauß-Strahl mit Taille in der Tiefe z_f → BWPM durch eine Realisierung der
+Mikrostruktur bis z_h → Husimi-Pakete (`rtt_fusion.phasespace`, periodische Fenster) → Monte Carlo
+mit den Born-Parametern (auch auf dem Rückweg durch 0 < z < z_h) → Kopplung der austretenden
+Pakete in die Detektionsmode (Rückverfolgung zur Taille, Wigner-Dichte) → Kohärenz-Gating.
+
+- Gauß-Strahl: rms-Radius im Fokus w_f/2 auf 2 % (ein Vorzeichenfehler im komplexen
+  Strahlparameter ließ den Strahl zuerst divergieren – vom Test gefunden).
+- Leistung an der Übergabe: 1,000 (z_h = 0) bzw. 0,998 (z_h = 3 µm durch das Zufallsmedium).
+- **Befund:** Der direkte Schätzer des modengekoppelten Signals ist zu verrauscht für Vergleiche
+  zwischen z_h: Nur wenige Pakete treffen den Phasenraum der Mode (Taille 2 µm, NA ≈ 0,05), das
+  Signal schwankt jenseits des Fokus um Größenordnungen. Nahe am Fokus liegen z_h = 0 und 3 µm in
+  derselben Größe (10⁻³). Nötig ist ein Next-Event-Schätzer (bei jeder Streuung der Beitrag aller
+  Richtungen in die Mode, mit Abschwächung bis zur Oberfläche) – S9b-4.
