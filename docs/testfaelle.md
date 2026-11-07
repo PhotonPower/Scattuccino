@@ -25,7 +25,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T7e | Polarisation im C++-Kern je Paket gleich der Python-Referenz (angepasst; Brechzahlsprünge, schräg, elliptisch; Rayleigh-Halbraum) | Python-Referenz | S6c | ✅ |
 | T7d | Benchmarks von Ramella-Roman, Prahl, Jacques (2005) | Literatur (Volltext nötig) | S6 | ○ |
 | T8 | Fluoreszenz und Raman: ohne Streuung gegen geschlossene Lösung; Energie der Emission; vorwärts gegen adjungiert (Fluchtfunktion); räumlich versetzte Detektion (SORS) | E₂-Integral; exakt; unabhängige Läufe; Verhalten | S7a | ✅ |
-| T9 | DCS/LSCI | Korrelationsdiffusion | S8 | ○ |
+| T9 | Dynamik: Impulsübertrag (⟨1 − cos θ⟩ = 1 − g), DCS gegen Korrelationsdiffusion, Speckle-Kontrast gegen geschlossene Form, Tiefenempfindlichkeit in zwei Schichten | exakt; Boas & Yodh; Bandyopadhyay | S8a | ✅ |
 | T10 | OCT | Einfachstreuung, erweitertes Huygens-Fresnel | S9 | ○ |
 | T11 | Jacobi-Matrizen | finite Differenzen | S10 | ○ |
 | T12 | Phantome | Mikrosphären (Mie exakt), Lipidemulsionen (Literatur) | S11 | ○ |
@@ -298,3 +298,18 @@ schneller als die vektorisierte Python-Referenz, mit OpenMP über alle Kerne.
 - **SORS:** Raman-aktiv nur die obere Schicht (0,5 mm) oder nur die Schicht darunter: Verhältnis
   tief/oben 0,54 bei 0–0,5 mm Abstand, 3,16 bei 4–6 mm – der tiefe Anteil wächst mit dem Abstand um
   den Faktor 5,8.
+
+## T9: Dynamik – DCS und Speckle-Kontrast (S8a)
+
+Protokoll mit Impulsübertrag je Schicht Y_t = Σ(1 − cos θ) (`Protocol.momentum`),
+`scattuccino.dynamics` (g1, g2, Speckle-Kontrast; Brownsche Bewegung und ungerichtete Strömung),
+`diffusion.g1_correlation_diffusion`.
+
+- ⟨1 − cos θ⟩ aus dem Protokoll: 0,10006 (HG g = 0,9; exakt 0,1).
+- **DCS** (Halbraum μa = 0,01–0,05, μs′ = 1 /mm, n = 1,4, λ = 785 nm, αD_B = 10⁻⁸ cm²/s): g1 bei
+  2–3 mm folgt der Korrelationsdiffusion auf 0,02 (z. B. τ = 1 ms: 0,378 gegen 0,400); bei 1–2 mm
+  (unter zwei Transportlängen) bis 0,11 daneben – Diffusion gilt dort nicht.
+- **Speckle-Kontrast**: numerische Integration von g1 = e^(−τ/τ_c) gegen die geschlossene Form
+  K = 0,42427 auf 10⁻⁸.
+- **Zwei Schichten**, Bewegung nur unter 1 mm: g1(0,3 ms) bei 3–4 mm deutlich kleiner als bei
+  0,5–1 mm – die Tiefenempfindlichkeit von DCS.

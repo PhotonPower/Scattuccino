@@ -46,6 +46,7 @@ class Protocol:
     packets: int
     mua_used: FloatArray  # μa per layer applied in the weights ("mbl": inside `weight`)
     packet: IntArray | None = None  # packet number of each exit (voxel transport, S4/S5)
+    momentum: FloatArray | None = None  # (N, layers) Σ (1 − cos θ) per layer (S8, dynamics)
 
     @property
     def total_path(self) -> FloatArray:
@@ -147,7 +148,7 @@ def simulate(
     r_sp = float(r_sp_arr[0])
     sin_t0 = stack.n_above / n_layer[0] * np.sqrt(1 - cos_incident**2)
     out: dict[str, list[FloatArray]] = {
-        k: [] for k in ("side", "x", "y", "ux", "uy", "uz", "w", "path", "nsc", "zmax")
+        k: [] for k in ("side", "x", "y", "ux", "uy", "uz", "w", "path", "nsc", "zmax", "mom")
     }
     absorbed = np.zeros(nl)
     agrid = np.zeros((grid.nr, grid.nz)) if grid else None
@@ -185,6 +186,7 @@ def simulate(
             ux, uy, uz = sz * np.cos(ph), sz * np.sin(ph), cz
         alive = np.ones(m, dtype=bool)
         path = np.zeros((m, nl))
+        mom = np.zeros((m, nl))
         nsc = np.zeros(m, dtype=np.int64)
         zmax = np.zeros(m)
         s_left = np.zeros(m)
@@ -215,6 +217,7 @@ def simulate(
             uz: FloatArray = uz,
             nsc: IntArray = nsc,
             zmax: FloatArray = zmax,
+            mom: FloatArray = mom,
         ) -> None:
             wout = w[ids]
             if mbl:
@@ -230,6 +233,7 @@ def simulate(
                 ("path", path[ids]),
                 ("nsc", nsc[ids]),
                 ("zmax", zmax[ids]),
+                ("mom", mom[ids]),
             ):
                 out[key].append(np.asarray(val))
 
@@ -320,6 +324,7 @@ def simulate(
                 phi = 2 * np.pi * rng.random(ib.size)
                 ux[ib], uy[ib], uz[ib] = _scatter(ux[ib], uy[ib], uz[ib], ct, phi)
                 nsc[ib] += 1
+                mom[ib, lb] += 1.0 - ct
                 w_eff = w[ib] * (np.exp(-(path[ib] @ mua)) if mbl else 1.0)
                 low = ib[w_eff < w_threshold]
                 if low.size:
@@ -333,7 +338,7 @@ def simulate(
                 long = idx[alive[idx] & (path[idx].sum(axis=1) > max_path)]
                 alive[long] = False
     cat = {
-        k: (np.concatenate(v) if v else np.zeros((0, nl)) if k == "path" else np.zeros(0))
+        k: (np.concatenate(v) if v else np.zeros((0, nl)) if k in ("path", "mom") else np.zeros(0))
         for k, v in out.items()
     }
     proto = Protocol(
@@ -350,6 +355,8 @@ def simulate(
         n_layer,
         packets,
         mua.copy(),
+        None,
+        cat["mom"].reshape(-1, nl),
     )
     events = None
     if record_absorption:

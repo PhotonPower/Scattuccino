@@ -114,3 +114,22 @@ def tpsf(
             + zp * np.exp(-(rho**2 + zp**2) / (4 * d * c * t))
         )
     )
+
+
+def g1_correlation_diffusion(
+    rho: float,
+    tau: FloatArray,
+    mua: float,
+    musp: float,
+    n: float,
+    wavelength_um: float,
+    alpha: float,
+    msd: FloatArray,
+) -> FloatArray:
+    """Normalised g1 of the correlation diffusion equation (Boas & Yodh 1997) for a half space:
+    the CW solution with μa → μa + (1/3) μs′ k₀² α ⟨Δr²(τ)⟩, k₀ = 2πn/λ, in the Kienle–Patterson
+    form (fluence and flux), divided by its value at τ = 0."""
+    k0 = 2 * np.pi * n / (wavelength_um * 1e-3)
+    r0 = reflectance_rho_kp(np.array([rho]), mua, musp, n)[0]
+    dyn = musp * k0**2 * alpha * np.asarray(msd, dtype=np.float64) / 3
+    return np.array([reflectance_rho_kp(np.array([rho]), mua + d, musp, n)[0] / r0 for d in dyn])

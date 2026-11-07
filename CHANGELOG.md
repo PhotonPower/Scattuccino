@@ -42,3 +42,5 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   zählerbasierten Zufall umgestellt, Fassade `fast.simulate_polarised_slab`; Test T7e (je Paket gleich).
 - S7a: Fluoreszenz und Raman (`scattuccino.fluorescence`), innere isotrope Quellen und
   Absorptionsereignisse im Schichttransport (`transport.Sources`, `record_absorption`); Tests T8.
+- S8a: Impulsübertrag je Schicht im Protokoll, `scattuccino.dynamics` (g1, g2, Speckle-Kontrast),
+  Korrelationsdiffusion; Tests T9.
