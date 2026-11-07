@@ -32,3 +32,5 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Streuschritt, Schicht/Halbraum mit angepasster Brechzahl, Stokes im Laborsystem); Tests T7a, T7b.
 - S6b: polarisierte Fresnel-Ereignisse an Brechzahlsprüngen (`interface`, `fresnel_amplitudes`), Schicht
   mit Brechzahlen und schrägem Einfall in `simulate_polarised`; Tests T7c. D7 (FP32-Option) freigegeben.
+- S6c: Polarisation im C++-Kern (`photon_pol.hpp`, `simulate_voxels_polarised`), Python-Referenz auf
+  zählerbasierten Zufall umgestellt, Fassade `fast.simulate_polarised_slab`; Test T7e (je Paket gleich).

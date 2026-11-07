@@ -30,9 +30,10 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from scattuccino._types import FloatArray
+from scattuccino._types import FloatArray, IntArray
 from scattuccino.mie import s12
 from scattuccino.phase import Tabulated
+from scattuccino.random import CounterRandom
 
 
 @dataclass
@@ -93,7 +94,8 @@ def scatter_step(
     v: FloatArray,
     stokes: FloatArray,
     xi_theta: FloatArray,
-    rng: np.random.Generator,
+    rng: CounterRandom,
+    ids: IntArray,
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
     """One scattering for N packets: directions u (N,3), frames v (N,3), Stokes (N,4) with I = 1."""
     mu = table.phase.sample(xi_theta)
@@ -103,9 +105,9 @@ def scatter_step(
     phi = np.empty(len(mu))
     todo = np.arange(len(mu))
     while todo.size:  # rejection: p(φ) ∝ 1 + m12 (Q cos 2φ + U sin 2φ)
-        trial = 2 * np.pi * rng.random(todo.size)
+        trial = 2 * np.pi * rng.uniform(ids[todo])
         f = 1.0 + m12[todo] * (q[todo] * np.cos(2 * trial) + uu[todo] * np.sin(2 * trial))
-        ok = rng.random(todo.size) * bound[todo] <= f
+        ok = rng.uniform(ids[todo]) * bound[todo] <= f
         phi[todo[ok]] = trial[ok]
         todo = todo[~ok]
     return apply_scattering(table, u, v, stokes, mu, phi)
@@ -273,7 +275,7 @@ def simulate_polarised(
     frame v = p̂ (in the plane of incidence; at normal incidence v = x̂), w = ŝ. Fresnel events with
     the polarised reflectance (S6b); the specular reflection at entry is returned separately in
     `PolarisedResult.specular` (Stokes in the reflected p/s frame, weight = reflectance)."""
-    rng = np.random.default_rng(seed)
+    rng = CounterRandom(seed, packets)
     mut = mua + mus
     s_in = np.asarray(stokes_in, dtype=np.float64) / stokes_in[0]
     sin_i = np.sqrt(1 - cos_incident**2)
@@ -306,7 +308,7 @@ def simulate_polarised(
         if idx.size == 0:
             break
         new = s_left[idx] <= 0
-        s_left[idx[new]] = -np.log(rng.random(int(new.sum())))
+        s_left[idx[new]] = -np.log(rng.uniform(idx[new]))
         step = s_left[idx] / mut if mus > 0 else np.full(idx.size, np.inf)
         uz = u[idx, 2]
         with np.errstate(divide="ignore", invalid="ignore"):
@@ -332,7 +334,7 @@ def simulate_polarised(
                     n_slab,
                     n_out,
                     normal,
-                    rng.random(ids.size) if n_slab != n_out else np.ones(ids.size),
+                    rng.uniform(ids) if n_slab != n_out else np.ones(ids.size),
                 )
                 u[ids], v[ids], s[ids] = un, vn, sn
                 out = ids[~refl]
@@ -341,11 +343,11 @@ def simulate_polarised(
         ib = idx[~hit]
         if ib.size and mus > 0:
             w[ib] *= mus / mut
-            u[ib], v[ib], s[ib] = scatter_step(table, u[ib], v[ib], s[ib], rng.random(ib.size), rng)
+            u[ib], v[ib], s[ib] = scatter_step(table, u[ib], v[ib], s[ib], rng.uniform(ib), rng, ib)
             nsc[ib] += 1
             low = ib[w[ib] < w_threshold]
             if low.size:
-                survive = rng.random(low.size) < 1.0 / roulette_m
+                survive = rng.uniform(low) < 1.0 / roulette_m
                 w[low[survive]] *= roulette_m
                 w[low[~survive]] = 0.0
                 alive[low[~survive]] = False

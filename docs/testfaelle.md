@@ -21,6 +21,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T7a | Polarisation, Streuschritt: Stokes aus Feldern (Mie über S1, S2; Rayleigh über das Dipolfeld) | unabhängige Feldrechnung | S6a | ✅ |
 | T7b | Polarisation im Transport: unpolarisiert = skalar; reine Zustände bleiben rein; Polarisationsgedächtnis (kleine/große Kugeln, linear/zirkular) | skalarer Transport; exakt; MacKintosh et al. (1989) | S6a | ✅ |
 | T7c | Fresnel-Mueller an Brechzahlsprüngen: Fresnel-Rhombus, Brewster, nicht streuende Schicht gegen inkohärente Summe der Wege, Energie | Optik-Lehrbuch; geschlossene Summe | S6b | ✅ |
+| T7e | Polarisation im C++-Kern je Paket gleich der Python-Referenz (angepasst; Brechzahlsprünge, schräg, elliptisch; Rayleigh-Halbraum) | Python-Referenz | S6c | ✅ |
 | T7d | Benchmarks von Ramella-Roman, Prahl, Jacques (2005) | Literatur (Volltext nötig) | S6 | ○ |
 | T8 | Fluoreszenz | Fluoreszenz-Diffusion | S7 | ○ |
 | T9 | DCS/LSCI | Korrelationsdiffusion | S8 | ○ |
@@ -195,3 +196,17 @@ Stokes mit den komplexen Fresnel-Amplituden (auch Totalreflexion mit Phase).
   −0,0085; 0) gegen (0,0229; −0,0213; −0,0084; 0), alle Komponenten innerhalb 4 σ.
 - **Energie** mit Streuung, zwei Brechzahlsprüngen und schrägem Einfall: 1 auf 10⁻¹²; kein Paket
   über dem Polarisationsgrad 1.
+
+## T7e: Polarisation im C++-Kern (S6c)
+
+`cpp/include/scattuccino/photon_pol.hpp` spiegelt `scattuccino.polarisation` Zeile für Zeile
+(Streuschritt mit Verwerfen, Drehung des Bezugssystems, Mueller-Verhältnisse wie `numpy.interp`
+samt Wiederherstellen der Reinheit, Fresnel-Amplituden mit Totalreflexion, polarisierter Eintritt)
+und läuft im Voxelgang; die Python-Referenz nutzt dafür jetzt ebenfalls die zählerbasierten
+Zufallszahlen je Paket. Fassade `scattuccino.fast.simulate_polarised_slab`.
+
+Drei Fälle, je 4 000 Pakete (angepasst/normal/linear; Brechzahlsprünge 1,4 und 1,5, 34°,
+elliptisch; Rayleigh-Halbraum mit Brechzahlsprung, zirkular): Austrittsseite, Zahl der Streuungen
+und Gewicht **bitgleich**; Stokes-Vektoren, Richtungen und Bezugsvektoren gleich bis 2·10⁻¹⁴
+(komplexe Division in libstdc++ gegen NumPy), im angepassten Fall bitgleich. Ein Kern: 5–7-mal
+schneller als die vektorisierte Python-Referenz, mit OpenMP über alle Kerne.

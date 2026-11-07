@@ -95,6 +95,35 @@ PYBIND11_MODULE(_core, m) {
     }
     return to_dict(o);
   });
+  py::class_<MuellerTable>(m, "MuellerTable")
+      .def(py::init<>())
+      .def_readwrite("mu", &MuellerTable::mu)
+      .def_readwrite("m12", &MuellerTable::m12)
+      .def_readwrite("m33", &MuellerTable::m33)
+      .def_readwrite("m34", &MuellerTable::m34)
+      .def_readwrite("pure", &MuellerTable::pure);
+  py::class_<PolInput>(m, "PolInput")
+      .def(py::init<>())
+      .def_readwrite("voxels", &PolInput::voxels)
+      .def_readwrite("mueller", &PolInput::mueller)
+      .def_readwrite("stokes_in", &PolInput::stokes_in);
+  m.def("simulate_voxels_polarised", [](const PolInput& in) {
+    PolOutput o;
+    {
+      py::gil_scoped_release release;
+      o = simulate_voxels_polarised(in);
+    }
+    py::dict d;
+    d["specular_r"] = o.specular_r;
+    d["specular_stokes"] = arr(o.specular_stokes);
+    d["absorbed"] = arr(o.absorbed);
+    d["id"] = arr(o.id);
+    d["side"] = arr(o.side);
+    for (auto [k, v] : {std::pair{"x", &o.x}, {"y", &o.y}, {"u", &o.u}, {"v", &o.v}, {"stokes", &o.stokes}, {"w", &o.w}})
+      d[k] = arr(*v);
+    d["scatterings"] = arr(o.scatterings);
+    return d;
+  });
   py::class_<TetInput>(m, "TetInput")
       .def(py::init<>())
       .def_readwrite("nodes", &TetInput::nodes)

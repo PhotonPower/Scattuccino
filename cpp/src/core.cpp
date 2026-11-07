@@ -2,6 +2,7 @@
 #include "scattuccino/core.hpp"
 
 #include "scattuccino/photon.hpp"
+#include "scattuccino/photon_pol.hpp"
 
 #include <algorithm>
 #include <array>
@@ -149,6 +150,94 @@ VoxelOutput simulate_voxels(const VoxelInput& in) {
     out.w.insert(out.w.end(), o.w.begin(), o.w.end());
     out.zmax.insert(out.zmax.end(), o.zmax.begin(), o.zmax.end());
     out.path.insert(out.path.end(), o.path.begin(), o.path.end());
+    out.scatterings.insert(out.scatterings.end(), o.scatterings.begin(), o.scatterings.end());
+  }
+  return out;
+}
+
+PolOutput simulate_voxels_polarised(const PolInput& pin) {
+  const VoxelInput& in = pin.voxels;
+  const Setup st = prepare(in);  // checks labels, entry voxel
+  const std::size_t nm = in.materials.size();
+  if (pin.mueller.size() != nm) throw std::invalid_argument("one Mueller table per material");
+  std::vector<photon::PolMaterialView> mats;
+  for (std::size_t m = 0; m < nm; ++m) {
+    const Material& M = in.materials[m];
+    const MuellerTable& T = pin.mueller[m];
+    if (M.phase.kind != PhaseKind::Tabulated) throw std::invalid_argument("polarised: phase must be tabulated S11");
+    photon::PolMaterialView mv{M.mua, M.mus, M.n, {}, {}};
+    mv.phase.kind = 3;
+    mv.phase.mu = M.phase.mu.data();
+    mv.phase.p = M.phase.p.data();
+    mv.phase.cdf = M.phase.cdf.data();
+    mv.phase.n = static_cast<int>(M.phase.mu.size());
+    mv.mueller = {T.mu.data(), T.m12.data(), T.m33.data(), T.m34.data(), static_cast<int>(T.mu.size()), T.pure};
+    mats.push_back(mv);
+  }
+  const photon::PolGeometry geo{in.nx, in.ny, in.nz, {in.dx, in.dy, in.dz}, {st.lo[0], st.lo[1], 0.0},
+                                in.labels.data(), mats.data(), in.n_above, in.n_below, in.periodic,
+                                in.w_threshold, in.roulette_m};
+  // polarised entry, as simulate_polarised (polarisation.py)
+  const double n_slab = in.materials[static_cast<std::size_t>(in.labels[(static_cast<std::size_t>(st.i0) * in.ny + st.j0) * in.nz])].n;
+  const double ci = in.cos_incident, si = std::sqrt(1 - ci * ci);
+  const double u0[3] = {si, 0.0, ci};
+  double v0[3] = {1.0, 0.0, 0.0};
+  if (si > 0) v0[0] = ci, v0[2] = -si;
+  double s_in[4];
+  for (int k = 0; k < 4; ++k) s_in[k] = pin.stokes_in[static_cast<std::size_t>(k)] / pin.stokes_in[0];
+  const double zhat[3] = {0.0, 0.0, 1.0};
+  double p_hat[3], s_hat[3], stp[4];
+  photon::frame_to_plane(u0, v0, s_in, zhat, p_hat, s_hat, stp);
+  photon::cplx rp, rs, tp, ts, ct;
+  photon::fresnel_amplitudes(in.n_above, n_slab, ci, rp, rs, tp, ts, ct);
+  double s_r[4], s_t[4];
+  photon::apply_amplitudes(rp, rs, stp, s_r);
+  photon::apply_amplitudes(tp, ts, stp, s_t);
+  const double big_r = s_r[0];
+  const double ratio = in.n_above / n_slab;
+  double ut[3];
+  for (int a = 0; a < 3; ++a) ut[a] = ratio * u0[a] + (ct.real() - ratio * ci) * zhat[a];
+  const double nu = photon::norm3(ut);
+  for (double& x : ut) x /= nu;
+  double vt[3];
+  photon::cross(s_hat, ut, vt);
+  double S0[4];
+  for (int k = 0; k < 4; ++k) S0[k] = s_t[k] / s_t[0];
+
+  PolOutput out;
+  out.specular_r = big_r;
+  for (int k = 0; k < 4; ++k) out.specular_stokes.push_back(big_r > 0 ? s_r[k] / s_r[0] : s_r[k]);
+  out.absorbed.assign(nm, 0.0);
+  const int threads = std::max(in.threads, 1);
+  std::vector<PolOutput> parts(static_cast<std::size_t>(threads));
+#pragma omp parallel for num_threads(threads) schedule(static)
+  for (int t = 0; t < threads; ++t) {
+    PolOutput& o = parts[static_cast<std::size_t>(t)];
+    o.absorbed.assign(nm, 0.0);
+    const std::int64_t begin = in.packets * t / threads, end = in.packets * (t + 1) / threads;
+    for (std::int64_t id = begin; id < end; ++id) {
+      auto deposit = [&](int mat, int, int, int, double dw) { o.absorbed[static_cast<std::size_t>(mat)] += dw; };
+      const photon::PolExit e = photon::trace_pol(geo, in.seed, static_cast<std::uint64_t>(id), ut, vt, S0,
+                                                  1.0 - big_r, st.i0, st.j0, deposit);
+      if (e.side == 2 || !in.record) continue;
+      o.id.push_back(id);
+      o.side.push_back(e.side);
+      o.x.push_back(e.x);
+      o.y.push_back(e.y);
+      o.u.insert(o.u.end(), e.u, e.u + 3);
+      o.v.insert(o.v.end(), e.v, e.v + 3);
+      o.stokes.insert(o.stokes.end(), e.S, e.S + 4);
+      o.w.push_back(e.w);
+      o.scatterings.push_back(e.scatterings);
+    }
+  }
+  for (const auto& o : parts) {
+    for (std::size_t k = 0; k < nm; ++k) out.absorbed[k] += o.absorbed[k];
+    out.id.insert(out.id.end(), o.id.begin(), o.id.end());
+    out.side.insert(out.side.end(), o.side.begin(), o.side.end());
+    for (auto [dst, src] : {std::pair{&out.x, &o.x}, {&out.y, &o.y}, {&out.u, &o.u}, {&out.v, &o.v},
+                            {&out.stokes, &o.stokes}, {&out.w, &o.w}})
+      dst->insert(dst->end(), src->begin(), src->end());
     out.scatterings.insert(out.scatterings.end(), o.scatterings.begin(), o.scatterings.end());
   }
   return out;
