@@ -59,6 +59,7 @@ def mode_coupled_signal(
     beam: Beam,
     n0: float,
     wavelength_um: float,
+    variances: tuple[float, float] | None = None,
 ) -> FloatArray:
     """Coupled power per packet: exit (x, y) at z = 0 with direction u (u_z < 0, inside the
     medium) traced back to the waist plane z_f; Wigner density of the Gaussian mode there."""
@@ -69,7 +70,47 @@ def mode_coupled_signal(
     xf = x + beam.z_f * u[:, 0] / u[:, 2]
     yf = y + beam.z_f * u[:, 1] / u[:, 2]
     kx, ky = -k * u[:, 0], -k * u[:, 1]
-    return np.asarray((2 * np.pi) ** 2 * weight * gaussian_mode_density(xf, yf, kx, ky, beam.w_f))
+    if variances is None:
+        return np.asarray(
+            (2 * np.pi) ** 2 * weight * gaussian_mode_density(xf, yf, kx, ky, beam.w_f)
+        )
+    vx, vk = variances  # general Gaussian acceptance (multimode detector), same normalisation
+    dens = np.exp(-(xf**2 + yf**2) / (2 * vx) - (kx**2 + ky**2) / (2 * vk)) / (
+        (2 * np.pi) ** 2 * vx * vk
+    )
+    return np.asarray((2 * np.pi) ** 2 * weight * dens)
+
+
+def next_event_signal(
+    events: dict[str, FloatArray],
+    mut: float,
+    phase_pdf: object,
+    beam: Beam,
+    n0: float,
+    wavelength_um: float,
+    variances: tuple[float, float] | None = None,
+) -> tuple[FloatArray, FloatArray]:
+    """Next-event estimator of the mode-coupled power (S9b-4).
+
+    At every scattering event (position r₀, depth z₀, weight w after absorption, incoming
+    direction u) the expected power scattered into the detection mode and leaving the surface
+    without further interaction, in the paraxial limit of the mode (its angular width ≪ the
+    width of the phase function):
+
+        E = w p(u·(−ẑ)) e^(−μt z₀) (2π/k²) exp(−ρ₀²/(2V))/V,  V = w_f²/4 + ((z_f − z₀)/k)²/w_f²
+
+    – the Gaussian-mode integral over the scattering directions done analytically; V is the
+    variance of the mode's intensity at depth z₀, so E ∝ |E_mode(r₀)|² (reciprocity). Matched
+    index, homogeneous μt above the event. `variances` = (v_x, v_k) replaces the mode by a general
+    Gaussian acceptance (V = v_x + ((z_f − z₀)/k)² v_k). Returns (contribution, optical path)."""
+    k = 2 * np.pi * n0 / (wavelength_um * 1e-3)
+    z0 = events["z"]
+    vx, vk = variances if variances is not None else (beam.w_f**2 / 4, 1 / beam.w_f**2)
+    v = vx + ((beam.z_f - z0) / k) ** 2 * vk
+    rho2 = events["x"] ** 2 + events["y"] ** 2
+    p = phase_pdf(-events["uz"])  # type: ignore[operator]
+    e = events["w"] * p * np.exp(-mut * z0) * (2 * np.pi / k**2) * np.exp(-rho2 / (2 * v)) / v
+    return np.asarray(e), np.asarray(events["opl"] + n0 * z0)
 
 
 @dataclass
@@ -96,6 +137,8 @@ def hybrid_oct(
     sigma_husimi: float | None = None,
     backend: str = "auto",
     max_path: float = np.inf,
+    estimator: str = "next_event",
+    acceptance: tuple[float, float] | None = None,
 ) -> HybridResult:
     from rtt_fusion.phasespace import field_to_packets
     from rtt_fusion.ports import GriddedField, Port, power
@@ -140,13 +183,39 @@ def hybrid_oct(
         np.asarray(pk.weight / p_in).astype(np.float64),
         np.column_stack([pk.ux, pk.uy, pk.uz]).astype(np.float64),
     )
-    sim = simulate(stack, m, seed=seed + 7, sources=src, max_path=max_path)
-    pr = sim.protocol
-    top = pr.side == -1
-    u = np.column_stack([pr.ux, pr.uy, pr.uz])[top]
-    coupled = mode_coupled_signal(pr.x[top], pr.y[top], u, pr.weight[top], beam, n0, wavelength_um)
-    zo = (n0 * z_h + (pr.path @ pr.n_layer)[top]) / 2
+    if estimator not in ("next_event", "direct"):
+        raise ValueError("estimator must be 'next_event' or 'direct'")
+    nee = estimator == "next_event"
     sigma = l_c / (2 * np.sqrt(2 * np.log(2)))
-    d = (z[None, :] - zo[:, None]) / sigma
-    sig_z = np.sum(coupled[:, None] * np.exp(-0.5 * d * d), axis=0) / (sigma * np.sqrt(2 * np.pi))
+    sig_z = np.zeros(z.size)
+
+    def gate(values: FloatArray, depth: FloatArray) -> None:
+        for i0 in range(0, depth.size, 50_000):
+            d = (z[None, :] - depth[i0 : i0 + 50_000, None]) / sigma
+            sig_z[:] += np.sum(values[i0 : i0 + 50_000, None] * np.exp(-0.5 * d * d), axis=0)
+
+    def on_events(ev: dict[str, FloatArray]) -> None:
+        val, opl = next_event_signal(
+            ev, mua + b.mus, b.phase.pdf, beam, n0, wavelength_um, acceptance
+        )
+        keep = val > 0
+        gate(val[keep], (n0 * z_h + opl[keep]) / 2)
+
+    sim = simulate(
+        stack,
+        m,
+        seed=seed + 7,
+        sources=src,
+        max_path=max_path,
+        record_scattering=on_events if nee else False,
+    )
+    if not nee:
+        pr = sim.protocol
+        top = pr.side == -1
+        u = np.column_stack([pr.ux, pr.uy, pr.uz])[top]
+        coupled = mode_coupled_signal(
+            pr.x[top], pr.y[top], u, pr.weight[top], beam, n0, wavelength_um, acceptance
+        )
+        gate(coupled, (n0 * z_h + (pr.path @ pr.n_layer)[top]) / 2)
+    sig_z /= sigma * np.sqrt(2 * np.pi)
     return HybridResult(np.asarray(z), np.asarray(sig_z), p_h, m)

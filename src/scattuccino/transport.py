@@ -18,6 +18,7 @@ Units: mm, 1/mm; time of flight t = Σ n_i L_i / c with c in mm/ps.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
@@ -94,6 +95,7 @@ class Simulation:
     grid: Grid | None
     seed: int
     events: dict[str, FloatArray] | None = None  # absorption events (S7): x, y, z, layer, dw
+    scatter_events: dict[str, FloatArray] | None = None  # scattering events (S9b-4)
 
     def fluence(self) -> FloatArray:
         """Φ(r, z) per incident power (1/mm²) from the absorbed grid: A/(μa · V)."""
@@ -126,6 +128,7 @@ def simulate(
     batch: int = 100_000,
     sources: Sources | None = None,
     record_absorption: bool = False,
+    record_scattering: bool | Callable[[dict[str, FloatArray]], None] = False,
 ) -> Simulation:
     """Monte Carlo with protocol (see module docstring). max_path ends packets whose path exceeds it
     (their weight is lost; use only where its share is negligible).
@@ -133,7 +136,11 @@ def simulate(
     sources (S7): isotropic packets from points inside the medium instead of the incident beam
     (`packets` must equal their number; weights are taken as given, not divided). With
     record_absorption the absorption events (position, layer, absorbed weight per incident power)
-    of the implicit scheme are returned in `Simulation.events`."""
+    of the implicit scheme are returned in `Simulation.events`. With record_scattering the
+    scattering events (position, layer, weight after absorption, incoming direction, optical path
+    so far) are returned in `Simulation.scatter_events` (S9b-4: next-event estimators); a callable
+    instead receives them batch by batch (weights per incident power) and nothing is stored – for
+    large runs."""
     if absorption not in ("implicit", "mbl"):
         raise ValueError("absorption must be 'implicit' or 'mbl'")
     mbl = absorption == "mbl"
@@ -154,6 +161,9 @@ def simulate(
     absorbed = np.zeros(nl)
     agrid = np.zeros((grid.nr, grid.nz)) if grid else None
     ev: dict[str, list[FloatArray]] = {k: [] for k in ("x", "y", "z", "layer", "dw")}
+    sev: dict[str, list[FloatArray]] = {
+        k: [] for k in ("x", "y", "z", "layer", "w", "ux", "uy", "uz", "opl")
+    }
     if sources is not None:
         if len(sources.x) != packets:
             raise ValueError("packets must equal the number of sources")
@@ -321,6 +331,35 @@ def simulate(
                         ):
                             ev[key].append(np.asarray(val, dtype=np.float64))
                     w[ib] -= dw
+                if record_scattering is not False:
+                    opl = path[ib] @ n_layer
+                    if callable(record_scattering):
+                        record_scattering(
+                            {
+                                "x": x[ib].copy(),
+                                "y": y[ib].copy(),
+                                "z": z[ib].copy(),
+                                "layer": lb.astype(np.float64),
+                                "w": w[ib] / packets,
+                                "ux": ux[ib].copy(),
+                                "uy": uy[ib].copy(),
+                                "uz": uz[ib].copy(),
+                                "opl": opl,
+                            }
+                        )
+                    else:
+                        for key, val in (
+                            ("x", x[ib]),
+                            ("y", y[ib]),
+                            ("z", z[ib]),
+                            ("layer", lb.astype(np.float64)),
+                            ("w", w[ib]),
+                            ("ux", ux[ib]),
+                            ("uy", uy[ib]),
+                            ("uz", uz[ib]),
+                            ("opl", opl),
+                        ):
+                            sev[key].append(np.asarray(val, dtype=np.float64))
                 xi_s = rng.random(ib.size)
                 ct = np.empty(ib.size)
                 for li_ in np.unique(lb):
@@ -363,6 +402,10 @@ def simulate(
         None,
         cat["mom"].reshape(-1, nl),
     )
+    scatter_events = None
+    if record_scattering is True:
+        scatter_events = {k: (np.concatenate(v) if v else np.zeros(0)) for k, v in sev.items()}
+        scatter_events["w"] = scatter_events["w"] / packets
     events = None
     if record_absorption:
         events = {k: (np.concatenate(v) if v else np.zeros(0)) for k, v in ev.items()}
@@ -376,6 +419,7 @@ def simulate(
         grid,
         seed,
         events,
+        scatter_events,
     )
 
 

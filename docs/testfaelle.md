@@ -29,7 +29,8 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T10a | OCT (Intensitätsmodell): Einfach-Rückstreuung gegen exaktes Integral; Kohärenz-Gating erhält das Signal; Anteil der Mehrfachstreuung und Beer-Gesetz des OCT | exakt; Integral; Verhalten | S9a | ✅ |
 | T10b | OCT mit Fokus (Fieldtracing), Übergang BWPM, erweitertes Huygens-Fresnel | Thrane, Schmitt; Querprobe BWPM | S9b/c | ○ |
 | T17a | Hybrid-OCT, Kette: Fokus des Gauß-Strahls, Modenkopplung eines Strahls, Leistung an der Übergabe | analytisch | S9b-3a | ✅ |
-| T17 | Hybrid-OCT: Unabhängigkeit von z_h, gegen erweitertes Huygens-Fresnel | S9b-4 (Next-Event-Schätzer), S9c | ○ |
+| T17b | Next-Event-Schätzer der Modenkopplung: gleich dem direkten Schätzer (Mehrmoden-Akzeptanz), Ereignisse stapelweise = gespeichert, Kopplung eines Punktstreuers ∝ Modenintensität | direkter Schätzer; exakt | S9b-4 | ✅ |
+| T17 | Hybrid-OCT: Unabhängigkeit von z_h (Server, `docs/agent-server-s9b4.md`), gegen erweitertes Huygens-Fresnel | S9b-4, S9c | ○ |
 | T16 | Zufallsmedium (Whittle-Matérn): Born gegen geschlossene Form, Feldstatistik, eine BWPM-Realisierung reproduziert Born-μs und g | exakt; Statistik; Born | S9b-2 | ✅ (Kalibrierläufe auf dem Server offen) |
 | T11 | Jacobi-Matrizen | finite Differenzen | S10 | ○ |
 | T12 | Phantome | Mikrosphären (Mie exakt), Lipidemulsionen (Literatur) | S11 | ○ |
@@ -362,3 +363,20 @@ Pakete in die Detektionsmode (Rückverfolgung zur Taille, Wigner-Dichte) → Koh
   Signal schwankt jenseits des Fokus um Größenordnungen. Nahe am Fokus liegen z_h = 0 und 3 µm in
   derselben Größe (10⁻³). Nötig ist ein Next-Event-Schätzer (bei jeder Streuung der Beitrag aller
   Richtungen in die Mode, mit Abschwächung bis zur Oberfläche) – S9b-4.
+
+## T17b: Next-Event-Schätzer (S9b-4)
+
+`hybrid.next_event_signal`: Bei jeder Streuung der erwartete Anteil, der in die Detektionsmode
+gestreut wird und die Oberfläche ohne weitere Wechselwirkung erreicht – das Integral über die
+Richtungen analytisch im paraxialen Grenzfall der Mode:
+E = w p(u·(−ẑ)) e^(−μt z₀) (2π/k²) e^(−ρ₀²/2V)/V, V = Varianz der Modenintensität in der Tiefe z₀
+(Reziprozität: Kopplung eines Punktstreuers ∝ |E_Mode(r₀)|²). Transport liefert die Streuereignisse
+auf Wunsch stapelweise an eine Funktion (`record_scattering=callable`), damit große Läufe nichts
+speichern.
+
+- Gegen den direkten Schätzer mit einer Mehrmoden-Akzeptanz (10 µm, NA ≈ 0,14), bei der dieser
+  konvergiert: Gesamtsignal auf 3–4 % gleich (paraxiale Näherung), im Hybridlauf 3,14 gegen
+  3,00·10⁻⁶ und mittlere Tiefe 25,6 gegen 26,9 µm.
+- Mit der beugungsbegrenzten Mode (2 µm) zeigt der lokale Vergleich z_h = 0 / 2,5 / 5 µm bei 2·10⁵
+  Paketen gleiche Größenordnungen, aber in den tiefen Bins noch Schwankungen um den Faktor 2 – die
+  Abnahme braucht 10⁷ Pakete und mehrere Seeds (Server-Auftrag).

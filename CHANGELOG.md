@@ -50,3 +50,6 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   mit BWPM); Tests T16; Auftrag für die Kalibrierläufe (`docs/agent-server-s9b2.md`).
 - S9b-3a: Hybrid-OCT-Kette (`scattuccino.hybrid`), innere Quellen mit Richtung (`Sources.direction`);
   Tests T17a; Befund: Next-Event-Schätzer nötig.
+- S9b-4: Next-Event-Schätzer der Modenkopplung (`hybrid.next_event_signal`), Streuereignisse im
+  Transport (`record_scattering`, auch stapelweise), allgemeine Gauß-Akzeptanz; Tests T17b;
+  Abnahmeauftrag `docs/agent-server-s9b4.md`.
