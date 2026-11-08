@@ -342,5 +342,9 @@ Gaußsches Zufallsfeld auf periodischem Gitter, Quantisierung für BWPM,
 - **Eine BWPM-Realisierung** (96² × 60 bei 0,1 µm, λ = 0,8 µm, n₀ = 1,38, l_c = 0,5 µm,
   σ_n = 0,057 → Born μs = 200 /mm, g = 0,935): μs aus der Extinktion 192 /mm (−4 %), g vorwärts
   0,942 gegen Born 0,946, Leistung auf 0,5 % erhalten. Bei kleinem lateralem Feld bleibt ein
-  kohärenter Boden von einigen Prozent (endlich viele Speckles); die Kalibrierläufe auf dem Server
-  (`docs/agent-server-s9b2.md`) nutzen 1024² und realistische μs.
+  kohärenter Boden von einigen Prozent (endlich viele Speckles).
+- **Kalibrierläufe auf dem Server** (`docs/bericht-s9b2.md`, `tools/calibrate_bwpm.py`; 512² × bis
+  3450 Ebenen, 16 Stufen statt 1024²/64 aus Kostengründen, beides geprüft): μs aus der Extinktion
+  0,96 ± 0,03 von Born (einzelne Läufe 0,89–0,99), g vorwärts innerhalb 3,5 % von Born, 1 − g
+  bei l_c ≤ 0,5 µm oder D < 5 um 20–35 % unter Born. Status: Kalibrierläufe erledigt, volle
+  Spezifikation (1024², 64 Stufen) offen.
