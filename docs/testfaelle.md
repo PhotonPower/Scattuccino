@@ -28,6 +28,10 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T9 | Dynamik: Impulsübertrag (⟨1 − cos θ⟩ = 1 − g), DCS gegen Korrelationsdiffusion, Speckle-Kontrast gegen geschlossene Form, Tiefenempfindlichkeit in zwei Schichten | exakt; Boas & Yodh; Bandyopadhyay | S8a | ✅ |
 | T10a | OCT (Intensitätsmodell): Einfach-Rückstreuung gegen exaktes Integral; Kohärenz-Gating erhält das Signal; Anteil der Mehrfachstreuung und Beer-Gesetz des OCT | exakt; Integral; Verhalten | S9a | ✅ |
 | T10b | OCT mit Fokus (Fieldtracing), Übergang BWPM, erweitertes Huygens-Fresnel | Thrane, Schmitt; Querprobe BWPM | S9b/c | ○ |
+| T17a | Hybrid-OCT, Kette: Fokus des Gauß-Strahls, Modenkopplung eines Strahls, Leistung an der Übergabe | analytisch | S9b-3a | ✅ |
+| T17b | Next-Event-Schätzer der Modenkopplung: gleich dem direkten Schätzer (Mehrmoden-Akzeptanz), Ereignisse stapelweise = gespeichert, Kopplung eines Punktstreuers ∝ Modenintensität | direkter Schätzer; exakt | S9b-4 | ✅ |
+| T16b | Gemessene Streuparameter aus der BWPM für den Monte Carlo: μs aus der Extinktion; Phasenfunktion vorwärts gemessen, rückwärts und unter der Winkelauflösung des Gitters Born (absolut) – normiert, Rückwärtsteil = Born auf 5 % | exakt / Born | S9b-5 | ✅ |
+| T17 | Hybrid-OCT: Unabhängigkeit von z_h (Server, `docs/agent-server-s9b4.md`), gegen erweitertes Huygens-Fresnel | S9b-4, S9c | ○ |
 | T16 | Zufallsmedium (Whittle-Matérn): Born gegen geschlossene Form, Feldstatistik, eine BWPM-Realisierung reproduziert Born-μs und g | exakt; Statistik; Born | S9b-2 | ✅ (Kalibrierläufe auf dem Server offen) |
 | T11 | Jacobi-Matrizen | finite Differenzen | S10 | ○ |
 | T12 | Phantome | Mikrosphären (Mie exakt), Lipidemulsionen (Literatur) | S11 | ○ |
@@ -342,9 +346,55 @@ Gaußsches Zufallsfeld auf periodischem Gitter, Quantisierung für BWPM,
 - **Eine BWPM-Realisierung** (96² × 60 bei 0,1 µm, λ = 0,8 µm, n₀ = 1,38, l_c = 0,5 µm,
   σ_n = 0,057 → Born μs = 200 /mm, g = 0,935): μs aus der Extinktion 192 /mm (−4 %), g vorwärts
   0,942 gegen Born 0,946, Leistung auf 0,5 % erhalten. Bei kleinem lateralem Feld bleibt ein
+  kohärenter Boden von einigen Prozent (endlich viele Speckles); die Kalibrierläufe auf dem Server
+  (`docs/agent-server-s9b2.md`) nutzen 1024² und realistische μs.
+
+## T17a: Hybrid-OCT-Kette (S9b-3a)
+
+`scattuccino.hybrid`: Gauß-Strahl mit Taille in der Tiefe z_f → BWPM durch eine Realisierung der
+Mikrostruktur bis z_h → Husimi-Pakete (`rtt_fusion.phasespace`, periodische Fenster) → Monte Carlo
+mit den Born-Parametern (auch auf dem Rückweg durch 0 < z < z_h) → Kopplung der austretenden
+Pakete in die Detektionsmode (Rückverfolgung zur Taille, Wigner-Dichte) → Kohärenz-Gating.
+
+- Gauß-Strahl: rms-Radius im Fokus w_f/2 auf 2 % (ein Vorzeichenfehler im komplexen
+  Strahlparameter ließ den Strahl zuerst divergieren – vom Test gefunden).
+- Leistung an der Übergabe: 1,000 (z_h = 0) bzw. 0,998 (z_h = 3 µm durch das Zufallsmedium).
+- **Befund:** Der direkte Schätzer des modengekoppelten Signals ist zu verrauscht für Vergleiche
+  zwischen z_h: Nur wenige Pakete treffen den Phasenraum der Mode (Taille 2 µm, NA ≈ 0,05), das
+  Signal schwankt jenseits des Fokus um Größenordnungen. Nahe am Fokus liegen z_h = 0 und 3 µm in
+  derselben Größe (10⁻³). Nötig ist ein Next-Event-Schätzer (bei jeder Streuung der Beitrag aller
+  Richtungen in die Mode, mit Abschwächung bis zur Oberfläche) – S9b-4.
+
+## T17b: Next-Event-Schätzer (S9b-4)
+
+`hybrid.next_event_signal`: Bei jeder Streuung der erwartete Anteil, der in die Detektionsmode
+gestreut wird und die Oberfläche ohne weitere Wechselwirkung erreicht – das Integral über die
+Richtungen analytisch im paraxialen Grenzfall der Mode:
+E = w p(u·(−ẑ)) e^(−μt z₀) (2π/k²) e^(−ρ₀²/2V)/V, V = Varianz der Modenintensität in der Tiefe z₀
+(Reziprozität: Kopplung eines Punktstreuers ∝ |E_Mode(r₀)|²). Transport liefert die Streuereignisse
+auf Wunsch stapelweise an eine Funktion (`record_scattering=callable`), damit große Läufe nichts
+speichern.
+
+- Gegen den direkten Schätzer mit einer Mehrmoden-Akzeptanz (10 µm, NA ≈ 0,14), bei der dieser
+  konvergiert: Gesamtsignal auf 3–4 % gleich (paraxiale Näherung), im Hybridlauf 3,14 gegen
+  3,00·10⁻⁶ und mittlere Tiefe 25,6 gegen 26,9 µm.
+- Mit der beugungsbegrenzten Mode (2 µm) zeigt der lokale Vergleich z_h = 0 / 2,5 / 5 µm bei 2·10⁵
+  Paketen gleiche Größenordnungen, aber in den tiefen Bins noch Schwankungen um den Faktor 2 – die
+  Abnahme braucht 10⁷ Pakete und mehrere Seeds (Server-Auftrag).
   kohärenter Boden von einigen Prozent (endlich viele Speckles).
 - **Kalibrierläufe auf dem Server** (`docs/bericht-s9b2.md`, `tools/calibrate_bwpm.py`; 512² × bis
   3450 Ebenen, 16 Stufen statt 1024²/64 aus Kostengründen, beides geprüft): μs aus der Extinktion
   0,96 ± 0,03 von Born (einzelne Läufe 0,89–0,99), g vorwärts innerhalb 3,5 % von Born, 1 − g
   bei l_c ≤ 0,5 µm oder D < 5 um 20–35 % unter Born. Status: Kalibrierläufe erledigt, volle
   Spezifikation (1024², 64 Stufen) offen.
+
+## T16b: Gemessene Streuparameter für den Monte Carlo (S9b-5)
+
+`Calibration.scattering()` liefert (μs, Phasenfunktion) der BWPM-Realisierung: vorwärts die
+gemessene Winkelverteilung; **rückwärts** – von der Vorwärtsausbreitung nicht erfasst, aber für OCT
+und Reflexion entscheidend – Born in absoluten Werten (σ_Born/μs,gemessen); unter der
+Winkelauflösung des Gitters (zwei k⊥-Zellen) ebenfalls Born. Ein erster Ansatz, der die
+Rückwärtshälfte nur in der Form von Born übernahm und bei 90° an die Messung anschloss, unterdrückte
+die Rückstreuung um vier Größenordnungen (die Vorwärtsausbreitung sieht bei 90° fast nichts) – das
+OCT-Signal fiel entsprechend. Mit dem jetzigen Ansatz liegt das Hybrid-Signal (z_h = 2,5 µm) mit
+gemessenen Parametern in derselben Größe wie mit Born (lokal, 5·10⁴ Pakete).

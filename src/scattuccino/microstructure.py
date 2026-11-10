@@ -88,6 +88,13 @@ class Calibration:
     g_forward: float  # ⟨cos θ⟩ of the scattered light at the shallowest depth > 0 (forward half)
     born: BornScattering
     g_forward_born: float
+    phase_measured: Tabulated | None = None  # forward half from BWPM, backward half Born (absolute)
+
+    def scattering(self) -> tuple[float, Tabulated]:
+        """(μs, phase function) as measured in BWPM, for the Monte Carlo below the hand-off (D9:
+        both regions describe the same medium – the realisation, not its Born limit)."""
+        assert self.phase_measured is not None
+        return self.mus_fit, self.phase_measured
 
 
 def calibrate_with_bwpm(
@@ -100,6 +107,7 @@ def calibrate_with_bwpm(
     keep_every: int = 10,
     backend: str = "auto",
     fit_range: tuple[float, float] = (0.9, 0.05),
+    n_bins: int = 90,
 ) -> Calibration:
     """Propagate a plane wave through one realisation in BWPM (forward FPWPM) and measure the
     extinction of the coherent field (μs) and the angular distribution of the scattered field
@@ -152,4 +160,44 @@ def calibrate_with_bwpm(
         np.trapezoid(b.phase.mu[fw] * b.phase.p[fw], b.phase.mu[fw])
         / np.trapezoid(b.phase.p[fw], b.phase.mu[fw])
     )
-    return Calibration(depths, c, np.array(tot), mus_fit, g_fwd, b, g_b)
+    theta_min = 2 * (2 * np.pi / (nx * spacing)) / k
+    phase = _measured_phase(ct[prop], w[prop], b, n_bins, mus_fit, float(theta_min))
+    return Calibration(depths, c, np.array(tot), mus_fit, g_fwd, b, g_b, phase)
+
+
+def _measured_phase(
+    cos_t: FloatArray,
+    weight: FloatArray,
+    b: BornScattering,
+    n_bins: int,
+    mus_measured: float,
+    theta_min: float,
+) -> Tabulated:
+    """Phase function for the Monte Carlo from the BWPM run: the **forward** half from the
+    scattered power per k⊥ cell (weight ∝ σ dΩ, histogram over θ → density per sr); the
+    **backward** half – which the forward propagation cannot see, but on which OCT and
+    reflectance depend – from Born in absolute terms (σ_Born(θ)/μs,measured: weak scattering, Born
+    valid there). Below θ_min (two k⊥ cells of the finite lateral box) the grid resolves no
+    angles; there Born is used as well. The measured part is scaled so that the whole integrates
+    to 1."""
+    theta = np.arccos(np.clip(cos_t, 0.0, 1.0))
+    edges = np.linspace(theta_min, np.pi / 2, n_bins + 1)
+    h, _ = np.histogram(theta, bins=edges, weights=weight)
+    d_omega = 2 * np.pi * (np.cos(edges[:-1]) - np.cos(edges[1:]))
+    dens = h / d_omega
+    mu_f = np.cos(0.5 * (edges[:-1] + edges[1:]))[::-1].astype(np.float64)  # ascending in μ
+    p_f = dens[::-1]
+    mu_b = np.linspace(-1.0, 0.0, 4 * n_bins + 1).astype(np.float64)
+    p_b = b.phase.pdf(mu_b) * b.mus / mus_measured if mus_measured > 0 else b.phase.pdf(mu_b)
+    mu_s = np.cos(np.linspace(theta_min, 0.0, 41)).astype(np.float64)  # small angles, ascending
+    p_s = b.phase.pdf(mu_s) * b.mus / mus_measured if mus_measured > 0 else b.phase.pdf(mu_s)
+    back = 2 * np.pi * float(np.trapezoid(p_b, mu_b))
+    small = 2 * np.pi * float(np.trapezoid(p_s, mu_s))
+    fwd = 2 * np.pi * float(np.trapezoid(p_f, mu_f))
+    p_f = p_f * max(1.0 - back - small, 0.0) / fwd if fwd > 0 else p_f
+    mu = np.concatenate([mu_b, mu_f, mu_s[1:]])
+    p = np.concatenate([p_b, p_f, p_s[1:]])
+    order = np.argsort(mu, kind="stable")
+    mu, p = mu[order], np.maximum(p[order], 0.0)
+    keep = np.concatenate([[True], np.diff(mu) > 0])
+    return Tabulated(mu[keep].astype(np.float64), p[keep].astype(np.float64))

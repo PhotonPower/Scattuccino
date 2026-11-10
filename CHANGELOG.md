@@ -48,5 +48,13 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Kohärenz-Gating, exakte Einfach-Rückstreuung); Tests T10a.
 - S9b-2: Zufallsmedium (`scattuccino.microstructure`: Whittle-Matérn, Born, Zufallsfeld, Kalibrierung
   mit BWPM); Tests T16; Auftrag für die Kalibrierläufe (`docs/agent-server-s9b2.md`).
+- S9b-3a: Hybrid-OCT-Kette (`scattuccino.hybrid`), innere Quellen mit Richtung (`Sources.direction`);
+  Tests T17a; Befund: Next-Event-Schätzer nötig.
+- S9b-4: Next-Event-Schätzer der Modenkopplung (`hybrid.next_event_signal`), Streuereignisse im
+  Transport (`record_scattering`, auch stapelweise), allgemeine Gauß-Akzeptanz; Tests T17b;
+  Abnahmeauftrag `docs/agent-server-s9b4.md`.
 - S9b-2: Kalibrierläufe des Zufallsmediums in BWPM (`tools/calibrate_bwpm.py`, Bericht
   `docs/bericht-s9b2.md`, Rohdaten unter `tools/out/`).
+- S9b-5: Monte Carlo im Hybrid mit den in der BWPM gemessenen Streuparametern
+  (`Calibration.scattering()`, `hybrid_oct(scattering=…)`); Raumwinkel-Jacobi in der g-Auswertung;
+  Abnahmeauftrag mit Kalibrierschritt.

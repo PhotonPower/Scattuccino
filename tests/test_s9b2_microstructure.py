@@ -69,3 +69,20 @@ def test_bwpm_realisation_reproduces_born() -> None:
         abs(cal.g_forward - cal.g_forward_born) < 0.02
     )  # 0.934 vs 0.946 (μs z = 0.4: some multiple scattering)
     assert np.all(np.abs(cal.total - 1) < 0.02)  # forward FPWPM conserves power
+
+
+def test_measured_phase_function_for_the_monte_carlo() -> None:
+    pytest.importorskip("bwpm")
+    med = WhittleMatern(0.0572, 0.5e-3, 4.0)
+    cal = calibrate_with_bwpm(
+        med, N0, LAM, (60, 96, 96), 1e-4, np.random.default_rng(1), keep_every=20
+    )
+    mus, phase = cal.scattering()
+    x, w = np.polynomial.legendre.leggauss(4000)
+    assert abs(2 * np.pi * np.sum(w * phase.pdf(x.astype(np.float64))) - 1) < 1e-3
+    assert mus == cal.mus_fit
+    # the backward half (not seen by the forward propagation) is Born in absolute terms
+    mu_b = np.array([-1.0, -0.5])
+    sigma = phase.pdf(mu_b) * mus
+    sigma_born = cal.born.phase.pdf(mu_b) * cal.born.mus
+    assert np.all(np.abs(sigma / sigma_born - 1) < 0.05)
