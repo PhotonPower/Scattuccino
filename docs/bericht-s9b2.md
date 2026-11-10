@@ -97,3 +97,14 @@ etwa 0,8, `phase_bwpm_vs_born.csv`); der Effekt wächst mit kleinem l_c und klei
 anheben); g aus Born nur für l_c ≥ 1 µm oder D ≥ 5 auf 10 % von 1 − g, sonst ist die
 Kalibrierung über (σ_n, l_c, D) an der gemessenen Winkelverteilung nötig. Offen: 1024² mit
 64 Stufen laut Auftrag (Kosten oben, Rückfrage an den Maintainer, ob nötig).
+
+## Durchsicht (Maintainer-Seite, 2026-11-08)
+
+- Abweichungen 512² / 16 Stufen angenommen (Stufen- und Größenprüfung belegen sie).
+- **Raumwinkel-Jacobi korrigiert** in `calibrate_with_bwpm` (Gewicht je k⊥-Zelle |F|² cos θ statt
+  |F|² cos²θ); die Spalte „g (Ω)“ ist damit die maßgebliche. Kleiner Testfall: g vorwärts 0,934
+  statt 0,942 (Born 0,946).
+- Folgerung für D9: Unten nicht Born, sondern die in der BWPM gemessenen Größen verwenden (μs aus
+  der Extinktion, Phasenfunktion aus der Winkelverteilung), damit oben und unten dasselbe Medium
+  beschreiben; die Abweichung des BWPM von Born bei großen Winkeln (1 − g −21 % bei l_c = 0,5 µm)
+  wird als Frage an BWPM geprüft.
