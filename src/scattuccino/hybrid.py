@@ -63,18 +63,14 @@ def mode_coupled_signal(
 ) -> FloatArray:
     """Coupled power per packet: exit (x, y) at z = 0 with direction u (u_z < 0, inside the
     medium) traced back to the waist plane z_f; Wigner density of the Gaussian mode there."""
-    from rtt_fusion.phasespace import gaussian_mode_density
-
     k = 2 * np.pi * n0 / (wavelength_um * 1e-3)
     # the time-reversed ray goes down with direction −u: r(z_f) = r₀ + z_f (−u⊥)/(−u_z)
     xf = x + beam.z_f * u[:, 0] / u[:, 2]
     yf = y + beam.z_f * u[:, 1] / u[:, 2]
     kx, ky = -k * u[:, 0], -k * u[:, 1]
-    if variances is None:
-        return np.asarray(
-            (2 * np.pi) ** 2 * weight * gaussian_mode_density(xf, yf, kx, ky, beam.w_f)
-        )
-    vx, vk = variances  # general Gaussian acceptance (multimode detector), same normalisation
+    # Wigner density of the Gaussian mode at its waist (as rtt_fusion.phasespace), or a general
+    # Gaussian acceptance (multimode detector) with the same normalisation
+    vx, vk = variances if variances is not None else (beam.w_f**2 / 4, 1 / beam.w_f**2)
     dens = np.exp(-(xf**2 + yf**2) / (2 * vx) - (kx**2 + ky**2) / (2 * vk)) / (
         (2 * np.pi) ** 2 * vx * vk
     )
