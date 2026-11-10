@@ -39,7 +39,7 @@ Volumenausgaben (Fluenz, absorbierte Energie) bedienen Photoakustik und Therapie
 | **S6 Polarisation** | S6a ✅ Stokes-Vektoren, Mueller-Matrizen je Streuung, mitgeführtes Bezugssystem (Python-Referenz); S6b ✅ Fresnel-Mueller an Brechzahlsprüngen; S6c ✅ C++-Kern (CPU, Voxel); offen: GPU (mit FP32), Konventionen von `rtt-polar`, Benchmarks Ramella-Roman | Benchmarks von Ramella-Roman, Prahl, Jacques; Mie-Mueller |
 | **S7 Fluoreszenz und Raman** | S7a ✅ zweistufig in Schichten (Python): Quellen aus der Absorption, Quantenausbeute, Re-Absorption; offen: Emissionsspektren, Voxel/C++/GPU, Fluoreszenzlebensdauer im Zeitbereich | Fluoreszenz-Diffusionslösungen, Energiebilanz |
 | **S8 Dynamik** | S8a ✅ Impulsübertrag je Schicht → g₁(τ), g₂, Speckle-Kontrast (Brownsche Bewegung, ungerichtete Strömung); offen: Dopplerspektrum (LDF), Voxel/C++/GPU, Gewebemodelle mit Gefäßanteil | Korrelationsdiffusion (Boas, Yodh) |
-| **S9 OCT und Fokus** | S9a ✅ weglängenaufgelöste Rückstreuung, Kohärenz-Gating, Einfach-/Mehrfachstreuung (Intensitätsmodell); S9b Fokus aus Fieldtracing und Hybrid mit BWPM in den ersten Weglängen (Entwurf `docs/entwurf-s9b-hybrid.md`, D8–D10); S9c erweitertes Huygens-Fresnel, Speckle | Einfachstreumodell und EHF (Thrane, Schmitt), Querprobe BWPM im schwach streuenden Grenzfall |
+| **S9 OCT und Fokus** | S9a ✅ weglängenaufgelöste Rückstreuung, Kohärenz-Gating, Einfach-/Mehrfachstreuung (Intensitätsmodell); S9b Fokus aus Fieldtracing und Hybrid mit BWPM (Entwurf `docs/entwurf-s9b-hybrid.md`, D8–D10 freigegeben; S9b-1 Phasenraum ✅ in RTT-Fusion; S9b-2 Zufallsmedium ✅, Kalibrierläufe auf dem Server; S9b-3 Hybrid-OCT); S9c erweitertes Huygens-Fresnel, Speckle | Einfachstreumodell und EHF (Thrane, Schmitt), Querprobe BWPM im schwach streuenden Grenzfall |
 | **S10 Inverse Probleme und schnelle Modelle** | adjungiertes und Störungs-MC (Jacobi-Matrizen), Skalierung einer Simulation auf viele (μa, μs) („White MC“), Nachschlagetabellen, SFDI-Inversion; Diffusion im Frequenzbereich über hp-FEM (Vorschlag) | Jacobi gegen finite Differenzen, Skalierung gegen direkte Läufe |
 | **S11 Gewebe- und Phantomdatenbank** | Chromophorspektren (HbO₂, Hb, Wasser, Lipid, Melanin, Bilirubin, Kollagen) mit Quellen, Gewebemodelle (Haut, Hirn, Brust, Muskel, Auge), Phantomrezepturen (Lipid, TiO₂/Silikon, Mikrosphären, Tinte), inverse Adding-Doubling für die Charakterisierung | Quellenwerte reproduziert, IAD gegen eigene Vorwärtsrechnung |
 | **S12 Fusion** | Adapter für RTT-Fusion: Strahlen ↔ Photonenpakete, radiometrischer Port (mit M9), BSSRDF-Tabelle für den sequenziellen Tracer; Datenports zu hp-FEM (Akustik, Wärme), BioOptoMD, Voxelspaetzle | Konformitätssatz der Fusion; gemeinsamer Pilot mit Voxelspaetzle |
@@ -57,7 +57,7 @@ OCT-Sonde, die in ein Gewebephantom abbildet (Druckmodell → Sonde → Gewebe �
 | D4 | Vergleich mit GPL-Codes | nur über veröffentlichte Ergebnisse, kein Code |
 | D5 | Diffusion, Akustik, Wärme | hp-FEM um skalare H1-Probleme erweitern (Vorschlag dort) statt eigener FEM |
 | D7 | FP32 im GPU-Kern | freigegeben 2026-11-07: FP64 Standard und Referenz, FP32 als `precision="single"`, Abnahme statistisch |
-| D8 | Feld → Pakete bei S9b | offen: Vorschlag Husimi-Phasenraum |
-| D9 | Übergabetiefe, Konsistenz oben/unten | offen: z_h ≈ 1–2/μs, Zufallsmedium in BWPM auf μs, g kalibriert |
-| D10 | Detektion in S9b | offen: Modenanpassung im Phasenraum |
+| D8 | Feld → Pakete bei S9b | freigegeben: Husimi-Phasenraum (Befund: Übergabe an/hinter den Fokus) |
+| D9 | Übergabetiefe, Konsistenz oben/unten | freigegeben: z_h ≈ 1–2/μs, Zufallsmedium in BWPM auf μs, g kalibriert |
+| D10 | Detektion in S9b | freigegeben: Modenanpassung im Phasenraum (ballistisches Licht über das Feld) |
 | D6 | Phantome und Messdaten | Validierung zunächst an Literatur; eigene Phantommessungen, sobald vorhanden |

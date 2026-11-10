@@ -28,6 +28,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T9 | Dynamik: Impulsübertrag (⟨1 − cos θ⟩ = 1 − g), DCS gegen Korrelationsdiffusion, Speckle-Kontrast gegen geschlossene Form, Tiefenempfindlichkeit in zwei Schichten | exakt; Boas & Yodh; Bandyopadhyay | S8a | ✅ |
 | T10a | OCT (Intensitätsmodell): Einfach-Rückstreuung gegen exaktes Integral; Kohärenz-Gating erhält das Signal; Anteil der Mehrfachstreuung und Beer-Gesetz des OCT | exakt; Integral; Verhalten | S9a | ✅ |
 | T10b | OCT mit Fokus (Fieldtracing), Übergang BWPM, erweitertes Huygens-Fresnel | Thrane, Schmitt; Querprobe BWPM | S9b/c | ○ |
+| T16 | Zufallsmedium (Whittle-Matérn): Born gegen geschlossene Form, Feldstatistik, eine BWPM-Realisierung reproduziert Born-μs und g | exakt; Statistik; Born | S9b-2 | ✅ (Kalibrierläufe auf dem Server offen) |
 | T11 | Jacobi-Matrizen | finite Differenzen | S10 | ○ |
 | T12 | Phantome | Mikrosphären (Mie exakt), Lipidemulsionen (Literatur) | S11 | ○ |
 
@@ -328,3 +329,22 @@ Monte-Carlo-OCT nach Yao & Wang (1999).
 - **Kohärenz-Gating** (l_c = 10 µm) erhält das detektierte Signal auf 10⁻³.
 - **Mehrfachstreuung** (Detektor 1 mm, 30°): Anteil 20 % bei 0,05 mm Tiefe, 99 % bei 1,9 mm; der
   Einfachstreu-Anteil fällt mit 2μt auf 1,5 % genau (Beer-Gesetz des OCT).
+
+## T16: Zufallsmedium und Kalibrierung (S9b-2)
+
+`scattuccino.microstructure`: Whittle-Matérn-Spektrum, Born-Streuung (μs, Phasenfunktion),
+Gaußsches Zufallsfeld auf periodischem Gitter, Quantisierung für BWPM,
+`calibrate_with_bwpm` (Extinktion des kohärenten Feldes → μs, Winkelspektrum → g, vorwärts).
+
+- Born für D = 4 gegen die geschlossene Form μs = 8k⁴σ_n²l_c³/(n₀²(1 + 4k²l_c²)) und g: 10⁻⁶.
+- Feldvarianz über 8 Realisierungen innerhalb 8 % der Gittererwartung (eine Realisierung schwankt
+  um ±6–9 % durch die wenigen langwelligen Moden); Korrelation e^(−r/l_c) auf 0,06.
+- **Eine BWPM-Realisierung** (96² × 60 bei 0,1 µm, λ = 0,8 µm, n₀ = 1,38, l_c = 0,5 µm,
+  σ_n = 0,057 → Born μs = 200 /mm, g = 0,935): μs aus der Extinktion 192 /mm (−4 %), g vorwärts
+  0,942 gegen Born 0,946, Leistung auf 0,5 % erhalten. Bei kleinem lateralem Feld bleibt ein
+  kohärenter Boden von einigen Prozent (endlich viele Speckles).
+- **Kalibrierläufe auf dem Server** (`docs/bericht-s9b2.md`, `tools/calibrate_bwpm.py`; 512² × bis
+  3450 Ebenen, 16 Stufen statt 1024²/64 aus Kostengründen, beides geprüft): μs aus der Extinktion
+  0,96 ± 0,03 von Born (einzelne Läufe 0,89–0,99), g vorwärts innerhalb 3,5 % von Born, 1 − g
+  bei l_c ≤ 0,5 µm oder D < 5 um 20–35 % unter Born. Status: Kalibrierläufe erledigt, volle
+  Spezifikation (1024², 64 Stufen) offen.
