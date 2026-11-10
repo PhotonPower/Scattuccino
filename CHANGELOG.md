@@ -55,3 +55,6 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Abnahmeauftrag `docs/agent-server-s9b4.md`.
 - S9b-2: Kalibrierläufe des Zufallsmediums in BWPM (`tools/calibrate_bwpm.py`, Bericht
   `docs/bericht-s9b2.md`, Rohdaten unter `tools/out/`).
+- S9b-5: Monte Carlo im Hybrid mit den in der BWPM gemessenen Streuparametern
+  (`Calibration.scattering()`, `hybrid_oct(scattering=…)`); Raumwinkel-Jacobi in der g-Auswertung;
+  Abnahmeauftrag mit Kalibrierschritt.

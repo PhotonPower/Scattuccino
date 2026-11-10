@@ -30,6 +30,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T10b | OCT mit Fokus (Fieldtracing), Übergang BWPM, erweitertes Huygens-Fresnel | Thrane, Schmitt; Querprobe BWPM | S9b/c | ○ |
 | T17a | Hybrid-OCT, Kette: Fokus des Gauß-Strahls, Modenkopplung eines Strahls, Leistung an der Übergabe | analytisch | S9b-3a | ✅ |
 | T17b | Next-Event-Schätzer der Modenkopplung: gleich dem direkten Schätzer (Mehrmoden-Akzeptanz), Ereignisse stapelweise = gespeichert, Kopplung eines Punktstreuers ∝ Modenintensität | direkter Schätzer; exakt | S9b-4 | ✅ |
+| T16b | Gemessene Streuparameter aus der BWPM für den Monte Carlo (μs, Phasenfunktion vorwärts gemessen, rückwärts Born-Form): normiert, g der Vorwärtshälfte = gemessenes g | exakt / Messung | S9b-5 | ✅ |
 | T17 | Hybrid-OCT: Unabhängigkeit von z_h (Server, `docs/agent-server-s9b4.md`), gegen erweitertes Huygens-Fresnel | S9b-4, S9c | ○ |
 | T16 | Zufallsmedium (Whittle-Matérn): Born gegen geschlossene Form, Feldstatistik, eine BWPM-Realisierung reproduziert Born-μs und g | exakt; Statistik; Born | S9b-2 | ✅ (Kalibrierläufe auf dem Server offen) |
 | T11 | Jacobi-Matrizen | finite Differenzen | S10 | ○ |

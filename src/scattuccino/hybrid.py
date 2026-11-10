@@ -28,6 +28,7 @@ import numpy as np
 from scattuccino._types import FloatArray
 from scattuccino.layers import Layer, Stack
 from scattuccino.microstructure import WhittleMatern, born, quantise, random_field
+from scattuccino.phase import PhaseFunction
 from scattuccino.transport import Sources, simulate
 
 
@@ -135,7 +136,11 @@ def hybrid_oct(
     max_path: float = np.inf,
     estimator: str = "next_event",
     acceptance: tuple[float, float] | None = None,
+    scattering: tuple[float, PhaseFunction] | None = None,
 ) -> HybridResult:
+    """scattering: (μs, phase function) for the Monte Carlo below and on the way back above the
+    hand-off; default Born. Use `Calibration.scattering()` from `calibrate_with_bwpm` on the same
+    grid so that both regions describe the same medium (D9, S9b-2 finding)."""
     from rtt_fusion.phasespace import field_to_packets
     from rtt_fusion.ports import GriddedField, Port, power
 
@@ -162,10 +167,11 @@ def hybrid_oct(
     pk = field_to_packets(g_h, packets, sig, rng, periodic=True)
     p_h = float(pk.weight.sum()) / p_in
     b = born(medium, n0, wavelength_um)
+    mus_mc, phase_mc = scattering if scattering is not None else (b.mus, b.phase)
     stack = Stack(
         (
-            Layer(max(z_h, 1e-12), mua, b.mus, 0.0, n0, phase=b.phase),
-            Layer(np.inf, mua, b.mus, 0.0, n0, phase=b.phase),
+            Layer(max(z_h, 1e-12), mua, mus_mc, 0.0, n0, phase=phase_mc),
+            Layer(np.inf, mua, mus_mc, 0.0, n0, phase=phase_mc),
         ),
         n0,
         n0,
@@ -192,7 +198,7 @@ def hybrid_oct(
 
     def on_events(ev: dict[str, FloatArray]) -> None:
         val, opl = next_event_signal(
-            ev, mua + b.mus, b.phase.pdf, beam, n0, wavelength_um, acceptance
+            ev, mua + mus_mc, phase_mc.pdf, beam, n0, wavelength_um, acceptance
         )
         keep = val > 0
         gate(val[keep], (n0 * z_h + opl[keep]) / 2)

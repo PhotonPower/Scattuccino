@@ -18,6 +18,20 @@ vergleichen.
   und BWPM mit CUDA-Kern installiert.
 - Läufe über 30 min vorher abschätzen.
 
+## Schritt 0: Kalibrierung auf demselben Gitter (neu, Befund S9b-2)
+
+Der Monte Carlo unter (und über) der Übergabe muss dasselbe Medium beschreiben wie die
+BWPM-Realisierung darüber – nicht dessen Born-Grenzfall (BWPM streut bei l_c = 0,5 µm in 1 − g
+um rund 20 % weniger als Born, μs um einige Prozent; PR #25). Deshalb zuerst:
+
+```python
+cal = calibrate_with_bwpm(medium, 1.38, 0.8, (nz, 256, 256), 1.5e-4, rng, keep_every=..., backend="cuda")
+scattering = cal.scattering()  # (μs gemessen, Phasenfunktion: vorwärts gemessen, rückwärts Born-Form)
+```
+
+mit Tiefe nz·1,5e-4 ≈ 4/μs. Alle Hybridläufe unten bekommen `scattering=scattering`. Zum
+Vergleich einen Satz (z_h = 0 und 0,005, Seed 1) zusätzlich ohne `scattering` (Born) rechnen.
+
 ## Läufe
 
 `scattuccino.hybrid.hybrid_oct(medium, n0=1.38, mua=1.0, wavelength_um=0.8, beam, z_h, z, l_c,
@@ -30,7 +44,7 @@ packets, seed, nx, dx, max_path, sigma_husimi, backend="cuda")`, Next-Event-Sch�
 | Gitter | `nx = 256`, `dx = 1.5e-4` (38 µm seitlich) |
 | z_h | 0; 0,0025; 0,005; 0,010 mm |
 | A-Scan | `z = np.linspace(0, 0.06, 31)`, `l_c = 0.004` |
-| Pakete | 10⁷ je Lauf, `max_path = 0.15`, `sigma_husimi = 0.6e-3` |
+| Pakete | 10⁷ je Lauf (Next-Event-Schätzer, Ereignisse werden nicht gespeichert), `max_path = 0.15`, `sigma_husimi = 0.6e-3` |
 | Seeds | 1, 2, 3 je z_h (Mittelwert und Standardfehler je Tiefe) |
 
 ## Auswertung
@@ -38,7 +52,7 @@ packets, seed, nx, dx, max_path, sigma_husimi, backend="cuda")`, Next-Event-Sch�
 Für Tiefen z ≥ 15 µm (hinter allen Übergaben): Verhältnis zu z_h = 0 mit Standardfehler aus den
 Seeds. Abnahme, wenn alle Verhältnisse innerhalb 3σ bei 1 liegen oder um höchstens 15 % abweichen
 (Born-Parameter unten gegen eine BWPM-Realisierung oben: bekannte Abweichung einige Prozent,
-T16). Zusätzlich die Laufzeit je Lauf und die Zahl der Streuereignisse.
+T16; mit `scattering` aus Schritt 0 sollte sie kleiner werden). Zusätzlich die Laufzeit je Lauf und die Zahl der Streuereignisse.
 
 ## Bericht
 

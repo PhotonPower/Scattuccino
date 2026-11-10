@@ -88,6 +88,13 @@ class Calibration:
     g_forward: float  # ⟨cos θ⟩ of the scattered light at the shallowest depth > 0 (forward half)
     born: BornScattering
     g_forward_born: float
+    phase_measured: Tabulated | None = None  # forward half from BWPM, backward half Born-shaped
+
+    def scattering(self) -> tuple[float, Tabulated]:
+        """(μs, phase function) as measured in BWPM, for the Monte Carlo below the hand-off (D9:
+        both regions describe the same medium – the realisation, not its Born limit)."""
+        assert self.phase_measured is not None
+        return self.mus_fit, self.phase_measured
 
 
 def calibrate_with_bwpm(
@@ -100,6 +107,7 @@ def calibrate_with_bwpm(
     keep_every: int = 10,
     backend: str = "auto",
     fit_range: tuple[float, float] = (0.9, 0.05),
+    n_bins: int = 90,
 ) -> Calibration:
     """Propagate a plane wave through one realisation in BWPM (forward FPWPM) and measure the
     extinction of the coherent field (μs) and the angular distribution of the scattered field
@@ -152,4 +160,32 @@ def calibrate_with_bwpm(
         np.trapezoid(b.phase.mu[fw] * b.phase.p[fw], b.phase.mu[fw])
         / np.trapezoid(b.phase.p[fw], b.phase.mu[fw])
     )
-    return Calibration(depths, c, np.array(tot), mus_fit, g_fwd, b, g_b)
+    phase = _measured_phase(ct[prop], w[prop], b, n_bins)
+    return Calibration(depths, c, np.array(tot), mus_fit, g_fwd, b, g_b, phase)
+
+
+def _measured_phase(
+    cos_t: FloatArray, weight: FloatArray, b: BornScattering, n_bins: int
+) -> Tabulated:
+    """Phase function from the scattered power per k⊥ cell (weight ∝ σ dΩ): histogram over θ in
+    the forward half → density per sr; the backward half (not seen by the forward propagation)
+    takes the Born shape, scaled to meet the measured density near 90°; normalised over the
+    sphere."""
+    theta = np.arccos(np.clip(cos_t, 0.0, 1.0))
+    edges = np.linspace(0.0, np.pi / 2, n_bins + 1)
+    h, _ = np.histogram(theta, bins=edges, weights=weight)
+    d_omega = 2 * np.pi * (np.cos(edges[:-1]) - np.cos(edges[1:]))
+    dens = h / d_omega
+    mu_f = np.cos(0.5 * (edges[:-1] + edges[1:]))[::-1]  # ascending in μ
+    p_f = dens[::-1]
+    tail = slice(0, max(n_bins // 20, 3))  # bins next to 90°
+    born_90 = b.phase.pdf(mu_f[tail])
+    scale = float(np.sum(p_f[tail]) / np.sum(born_90)) if np.sum(born_90) > 0 else 0.0
+    mu_b = np.linspace(-1.0, 0.0, n_bins // 2 + 1)[:-1].astype(np.float64)
+    p_b = scale * b.phase.pdf(mu_b)
+    mu = np.concatenate([mu_b, [0.0], mu_f, [1.0]])
+    p = np.concatenate([p_b, [0.5 * (p_b[-1] + p_f[0])], p_f, [p_f[-1]]])
+    order = np.argsort(mu)
+    mu, p = mu[order], np.maximum(p[order], 0.0)
+    keep = np.concatenate([[True], np.diff(mu) > 0])
+    return Tabulated(mu[keep].astype(np.float64), p[keep].astype(np.float64))
