@@ -142,7 +142,9 @@ def calibrate_with_bwpm(
     s = np.zeros((ny, nx))
     for comp in range(2):
         s += np.abs(np.fft.fft2(f[:, :, comp] - np.mean(f[:, :, comp]))) ** 2
-    w = s * ct**2 * prop  # power per solid angle ∝ |F|² cos²θ per k⊥ cell
+    # power per solid angle ∝ |F|² cos²θ; a k⊥ cell covers dΩ = dk⊥²/(k² cos θ), so the weight of
+    # the cell in an average over directions is |F|² cos θ (found in the S9b-2 server runs)
+    w = np.where(prop, s * ct, 0.0)
     g_fwd = float(np.sum(w * ct) / np.sum(w))
     b = born(medium, n0, wavelength_um)
     fw = b.phase.mu > 0

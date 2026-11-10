@@ -53,3 +53,5 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - S9b-4: Next-Event-Schätzer der Modenkopplung (`hybrid.next_event_signal`), Streuereignisse im
   Transport (`record_scattering`, auch stapelweise), allgemeine Gauß-Akzeptanz; Tests T17b;
   Abnahmeauftrag `docs/agent-server-s9b4.md`.
+- S9b-2: Kalibrierläufe des Zufallsmediums in BWPM (`tools/calibrate_bwpm.py`, Bericht
+  `docs/bericht-s9b2.md`, Rohdaten unter `tools/out/`).

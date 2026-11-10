@@ -380,3 +380,9 @@ speichern.
 - Mit der beugungsbegrenzten Mode (2 µm) zeigt der lokale Vergleich z_h = 0 / 2,5 / 5 µm bei 2·10⁵
   Paketen gleiche Größenordnungen, aber in den tiefen Bins noch Schwankungen um den Faktor 2 – die
   Abnahme braucht 10⁷ Pakete und mehrere Seeds (Server-Auftrag).
+  kohärenter Boden von einigen Prozent (endlich viele Speckles).
+- **Kalibrierläufe auf dem Server** (`docs/bericht-s9b2.md`, `tools/calibrate_bwpm.py`; 512² × bis
+  3450 Ebenen, 16 Stufen statt 1024²/64 aus Kostengründen, beides geprüft): μs aus der Extinktion
+  0,96 ± 0,03 von Born (einzelne Läufe 0,89–0,99), g vorwärts innerhalb 3,5 % von Born, 1 − g
+  bei l_c ≤ 0,5 µm oder D < 5 um 20–35 % unter Born. Status: Kalibrierläufe erledigt, volle
+  Spezifikation (1024², 64 Stufen) offen.
