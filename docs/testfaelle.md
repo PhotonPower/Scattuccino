@@ -30,7 +30,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T10b | OCT mit Fokus (Fieldtracing), Übergang BWPM, erweitertes Huygens-Fresnel | Thrane, Schmitt; Querprobe BWPM | S9b/c | ○ |
 | T17a | Hybrid-OCT, Kette: Fokus des Gauß-Strahls, Modenkopplung eines Strahls, Leistung an der Übergabe | analytisch | S9b-3a | ✅ |
 | T17b | Next-Event-Schätzer der Modenkopplung: gleich dem direkten Schätzer (Mehrmoden-Akzeptanz), Ereignisse stapelweise = gespeichert, Kopplung eines Punktstreuers ∝ Modenintensität | direkter Schätzer; exakt | S9b-4 | ✅ |
-| T16b | Gemessene Streuparameter aus der BWPM für den Monte Carlo (μs, Phasenfunktion vorwärts gemessen, rückwärts Born-Form): normiert, g der Vorwärtshälfte = gemessenes g | exakt / Messung | S9b-5 | ✅ |
+| T16b | Gemessene Streuparameter aus der BWPM für den Monte Carlo: μs aus der Extinktion; Phasenfunktion vorwärts gemessen, rückwärts und unter der Winkelauflösung des Gitters Born (absolut) – normiert, Rückwärtsteil = Born auf 5 % | exakt / Born | S9b-5 | ✅ |
 | T17 | Hybrid-OCT: Unabhängigkeit von z_h (Server, `docs/agent-server-s9b4.md`), gegen erweitertes Huygens-Fresnel | S9b-4, S9c | ○ |
 | T16 | Zufallsmedium (Whittle-Matérn): Born gegen geschlossene Form, Feldstatistik, eine BWPM-Realisierung reproduziert Born-μs und g | exakt; Statistik; Born | S9b-2 | ✅ (Kalibrierläufe auf dem Server offen) |
 | T11 | Jacobi-Matrizen | finite Differenzen | S10 | ○ |
@@ -387,3 +387,14 @@ speichern.
   0,96 ± 0,03 von Born (einzelne Läufe 0,89–0,99), g vorwärts innerhalb 3,5 % von Born, 1 − g
   bei l_c ≤ 0,5 µm oder D < 5 um 20–35 % unter Born. Status: Kalibrierläufe erledigt, volle
   Spezifikation (1024², 64 Stufen) offen.
+
+## T16b: Gemessene Streuparameter für den Monte Carlo (S9b-5)
+
+`Calibration.scattering()` liefert (μs, Phasenfunktion) der BWPM-Realisierung: vorwärts die
+gemessene Winkelverteilung; **rückwärts** – von der Vorwärtsausbreitung nicht erfasst, aber für OCT
+und Reflexion entscheidend – Born in absoluten Werten (σ_Born/μs,gemessen); unter der
+Winkelauflösung des Gitters (zwei k⊥-Zellen) ebenfalls Born. Ein erster Ansatz, der die
+Rückwärtshälfte nur in der Form von Born übernahm und bei 90° an die Messung anschloss, unterdrückte
+die Rückstreuung um vier Größenordnungen (die Vorwärtsausbreitung sieht bei 90° fast nichts) – das
+OCT-Signal fiel entsprechend. Mit dem jetzigen Ansatz liegt das Hybrid-Signal (z_h = 2,5 µm) mit
+gemessenen Parametern in derselben Größe wie mit Born (lokal, 5·10⁴ Pakete).

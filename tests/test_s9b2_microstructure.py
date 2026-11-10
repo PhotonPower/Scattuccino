@@ -81,8 +81,8 @@ def test_measured_phase_function_for_the_monte_carlo() -> None:
     x, w = np.polynomial.legendre.leggauss(4000)
     assert abs(2 * np.pi * np.sum(w * phase.pdf(x.astype(np.float64))) - 1) < 1e-3
     assert mus == cal.mus_fit
-    # the forward half is the measured one: its mean cosine is the measured g (forward)
-    mu = np.linspace(0.0, 1.0, 20_001).astype(np.float64)
-    pf = phase.pdf(mu)
-    g_half = float(np.trapezoid(mu * pf, mu) / np.trapezoid(pf, mu))
-    assert abs(g_half - cal.g_forward) < 0.005
+    # the backward half (not seen by the forward propagation) is Born in absolute terms
+    mu_b = np.array([-1.0, -0.5])
+    sigma = phase.pdf(mu_b) * mus
+    sigma_born = cal.born.phase.pdf(mu_b) * cal.born.mus
+    assert np.all(np.abs(sigma / sigma_born - 1) < 0.05)
