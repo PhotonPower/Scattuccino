@@ -1,6 +1,6 @@
 # Entwurf S9c: erweitertes Huygens-Fresnel (EHF) als analytische OCT-Referenz
 
-> Entwurf zur Freigabe (Entscheidungen D11–D13), Stand 2026-11-19. Formeln hier nur in ihrer
+> Entwurf, Stand 2026-11-19. D11 (Option C) und D12 freigegeben 2026-11-19; D13: Volltexte ausstehend. Formeln hier nur in ihrer
 > Struktur; Gleichungen und Gleichungsnummern werden erst nach dem Lesen der Volltexte
 > übernommen (Regel 6). Alle genannten Quellen haben den Status **Z**.
 
