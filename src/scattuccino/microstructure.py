@@ -94,6 +94,38 @@ def quantise(dn: FloatArray, n0: float, levels: int = 64) -> tuple[IntArray, lis
     return lab, [complex(n0 + lo + j * step) for j in range(levels)]
 
 
+def born_reflection(dn: FloatArray, n0: float, wavelength_um: float, spacing: float) -> np.ndarray:  # type: ignore[type-arg]
+    """First-order Born reflection of a slab with δn constant within each slice (S9c-4a).
+
+    dn: (nz, ny, nx) on a periodic grid with `spacing` (mm) in all directions, slice j covering
+    [j h, (j + 1) h) below the plane z = 0; host n₀ everywhere; incident plane wave x̂ e^(ikz),
+    k = n₀k₀. Returns F{E⊥} of the reflected field at z = 0, shape (ny, nx, 2), in numpy FFT order
+    and normalisation (as `np.fft.fft2` of the field): for each propagating κ, with
+    k_z = √(k² − κ²) and k_s = (κ, −k_z),
+
+        Ê(κ) = (i/(2k_z)) Σ_j F{V δn_j}(κ) ∫_slice e^(i(k + k_z)z) dz · [P(k_s) x̂]⊥,
+
+    V = 2n₀k₀² (first order in δn), P = I − k_s k_sᵀ/k² (Weyl expansion of the dyadic Green's
+    function, bornwolf1999; the transverse part of P x̂ is (1 − κ_x²/k², −κ_xκ_y/k²)). Evanescent
+    κ: zero."""
+    nz, ny, nx = dn.shape
+    k0 = 2 * np.pi / (wavelength_um * 1e-3)
+    k = n0 * k0
+    kx = 2 * np.pi * np.fft.fftfreq(nx, spacing)
+    ky = 2 * np.pi * np.fft.fftfreq(ny, spacing)
+    kxx, kyy = np.meshgrid(kx, ky)
+    kp2 = kxx**2 + kyy**2
+    prop = kp2 < k**2
+    kz = np.sqrt(np.where(prop, k**2 - kp2, 1.0))
+    q = k + kz
+    acc = np.zeros((ny, nx), dtype=np.complex128)
+    for j in range(nz):
+        phase = (np.exp(1j * q * (j + 1) * spacing) - np.exp(1j * q * j * spacing)) / (1j * q)
+        acc += np.fft.fft2(2 * n0 * k0**2 * dn[j]) * phase
+    amp = np.where(prop, 1j / (2 * kz) * acc, 0.0)
+    return np.stack([amp * (1 - kxx * kxx / k**2), amp * (-kyy * kxx / k**2)], axis=-1)
+
+
 def bwpm_medium(
     dn: FloatArray, n0: float, model: str = "steps", levels: int = 64
 ) -> tuple[IntArray, list[complex], FloatArray | None]:
