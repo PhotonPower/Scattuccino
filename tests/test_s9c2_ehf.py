@@ -11,6 +11,7 @@ from __future__ import annotations
 import numpy as np
 from scipy.special import erf
 
+from scattuccino._types import FloatArray
 from scattuccino.ehf import (
     beam_radii,
     general_efficiency,
@@ -45,7 +46,7 @@ def test_gaussian_mtf_reproduces_the_closed_form() -> None:
         rho0 = float(lateral_coherence_length(z, mus, th, 1.0, 0.0, LAM))
         e = np.exp(-mus * z)
 
-        def mtf(rho: np.ndarray, e: float = e, rho0: float = rho0) -> np.ndarray:
+        def mtf(rho: FloatArray, e: float = e, rho0: float = rho0) -> FloatArray:
             return np.asarray(e + (1 - e) * np.exp(-(rho**2) / rho0**2))
 
         psi = general_efficiency(z, a, k, mtf)
@@ -66,7 +67,7 @@ def test_phase_correlation_of_a_narrow_gaussian_lobe() -> None:
 def test_spherical_mtf_of_a_gaussian_correlation() -> None:
     # M_s = exp{−μs z [1 − ∫₀¹ b(ρu) du]}, b = exp(−ρ²/ρ_φ²): ∫₀¹ = √π erf(c)/(2c), c = ρ/ρ_φ
     mus, z, rho_phi = 5.0, 0.4, 0.01
-    rho = np.linspace(1e-6, 0.05, 50)
+    rho = np.linspace(1e-6, 0.05, 50).astype(np.float64)
     m = spherical_mtf(lambda r: np.exp(-(r**2) / rho_phi**2), mus, z)(rho)
     c = rho / rho_phi
     ref = np.exp(-mus * z * (1 - np.sqrt(np.pi) * erf(c) / (2 * c)))

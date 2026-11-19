@@ -148,8 +148,8 @@ def spherical_mtf(
     """M_s(ϱ, z) = exp{−μs z [1 − ∫₀¹ b(ϱu) du]} (lutomirski1971 Eq. 11 for spherical waves; the
     scatterer at depth s sees the separation ϱ(z − s)/z; μs z is the phase variance, thrane2000
     Eq. 18). Gauss-Legendre in u."""
-    x, wq = np.polynomial.legendre.leggauss(n_u)
-    u, wq = 0.5 * (x + 1), 0.5 * wq
+    x, w = np.polynomial.legendre.leggauss(n_u)
+    u, wq = 0.5 * (x + 1), 0.5 * w
 
     def mtf(rho: FloatArray) -> FloatArray:
         r = np.asarray(rho, dtype=np.float64)
@@ -170,7 +170,7 @@ def general_efficiency(
     Gaussian approximation of M_s (thrane2000 Eq. 20) this is the closed form (Eq. 21 integrated)
     for an aperture at the surface. Quadrature on a logarithmic grid in ϱ (10⁻⁷ A … 10 A)."""
     big_a = overlap_width(z, a, k)
-    rho = np.geomspace(1e-7 * big_a, 10 * big_a, n_rho)
+    rho = np.geomspace(1e-7 * big_a, 10 * big_a, n_rho).astype(np.float64)
     m = mtf(rho)
     f = m * m * 2 * (rho / big_a) ** 2 * np.exp(-((rho / big_a) ** 2))
     head = float(m[0] ** 2 * (rho[0] / big_a) ** 2)  # 0 ≤ ϱ < ϱ_min
