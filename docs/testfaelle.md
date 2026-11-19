@@ -420,7 +420,12 @@ r/cos²θ zu groß).
   | μs gefittet / μs Born | 0,960 | 1,010 |
   | g vorwärts gemessen / Born | 0,934 / 0,946 | 0,913 / 0,955 |
 
-  μs trifft jetzt die vektorielle Born-Näherung (Test: 10 %). g weicht um −0,042 ab: die FPWPM
+  μs liegt 1 % über der vektoriellen Born-Näherung (Test: 10 %). Das ist **kein** Beleg für
+  vektorielle Streuung: Die FPWPM erhält die Quernorm Σ|E⊥|², nicht den Fluss; ihr Kohärenzverlust
+  ist deshalb ∫ σ r²/cos θ dΩ über die Vorwärtshälfte (BWPM K17, Punkt 8, je Realisierung auf
+  0,2–1,7 % bestätigt), für dieses Medium 0,978 × skalares = 1,028 × vektorielles Born. Eine erste
+  Annahme aus Scattuccino (gestreute Querleistung ∫ σ r² dΩ, 0,932) war falsch. Das μs aus der
+  Extinktion der BWPM ist damit nicht das physikalische μs. g weicht um −0,042 ab: die FPWPM
   streut mit vollem Feld bei großen Winkeln zu viel. Die K17-Vorhersage für Einfachstreuung gibt
   durch E_z eine Verschiebung von −0,014 (gemessen −0,021), absolut liegen die Messungen etwa 0,03
   darunter (Mehrfachstreuung bei μs z = 0,4, nicht geprüft). Der g-Vergleich ist als

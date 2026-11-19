@@ -105,7 +105,9 @@ def test_bwpm_realisation_reproduces_born() -> None:
     cal = calibrate_with_bwpm(
         med, N0, LAM, (60, 96, 96), 1e-4, np.random.default_rng(1), keep_every=20
     )
-    # one small realisation; measured 1.010 against vector Born (0.960 against scalar Born)
+    # one small realisation; measured 1.010 against vector Born (0.960 against scalar Born). The
+    # FPWPM conserves the transverse norm, so its extinction is ∫ σ r²/cos θ dΩ (BWPM K17 point 8):
+    # 1.028 × vector Born – the closeness to vector Born is no proof of vector scattering
     assert abs(cal.mus_fit / cal.born.mus - 1) < 0.1
     assert np.all(np.abs(cal.total - 1) < 0.02)  # forward FPWPM conserves power
 
