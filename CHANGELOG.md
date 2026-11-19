@@ -60,6 +60,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Abnahmeauftrag mit Kalibrierschritt.
 - S9c begonnen: Entwurf erweitertes Huygens-Fresnel als OCT-Referenz (`docs/entwurf-s9c-ehf.md`,
   D11–D13 zur Freigabe).
+- S9c-1: geschlossene Form des EHF-Modells nach Thrane (`scattuccino.ehf`: `heterodyne_efficiency`,
+  `beam_radii`, `lateral_coherence_length`; diffus und spiegelnd, Shower-Curtain-Effekt), Kreuzterm
+  mit Faktor 4 (#36); Test T10b gegen Quadraturen und thrane2000 Abb. 2 und 3.
 - S9b-6: kohärente Übergabe ohne Husimi-Bias (#31): Projektion des Feldes an der Übergabe auf den
   frei propagierten Strahl (`hybrid.split_coherent`, `hybrid.free_field`), kohärenter Anteil aus der
   Wigner-Funktion des Gaußstrahls (`hybrid.gaussian_beam_packets`), nur der Rest über Husimi;
