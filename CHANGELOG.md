@@ -77,6 +77,8 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   BWPM K17/E9; Test T16c, g-Vergleich mit der BWPM als bekannte Abweichung (`xfail`). D9 ergänzt:
   Monte Carlo im Hybrid mit vektoriellem Born, gemessene Werte als Diagnose, solange BWPM #37 offen
   ist.
+- S9c-4b vorbereitet: `tools/backscatter_bwpm.py` (Rückstreuung der BWPM an δn gegen diskretes und
+  kontinuierliches Born und gegen Monte Carlo, Läufe für den Server).
 - S9c-4a: Born erster Ordnung der Reflexion einer Zufallsschicht (`microstructure.born_reflection`) und
   Vergleich mit der Rückstreuung der BWPM an δn (BWPM B8); Test T10c.
 - S7c: Emissionsspektren (`simulate_fluorescence_spectrum`, `SpectralFluorescenceResult`): Emission
