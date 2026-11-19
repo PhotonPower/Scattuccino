@@ -51,6 +51,7 @@ class Protocol:
     # S8b: the same over the events at moving scatterers only, and their number per layer
     momentum_moving: FloatArray | None = None
     n_moving: IntArray | None = None
+    time_offset_ps: FloatArray | None = None  # S7b: start time of each exit's source packet
 
     @property
     def total_path(self) -> FloatArray:
@@ -58,7 +59,8 @@ class Protocol:
 
     @property
     def time_ps(self) -> FloatArray:
-        return np.asarray(self.path @ self.n_layer / C_MM_PER_PS)
+        t = self.path @ self.n_layer / C_MM_PER_PS
+        return np.asarray(t if self.time_offset_ps is None else t + self.time_offset_ps)
 
     @property
     def rho(self) -> FloatArray:
@@ -86,6 +88,7 @@ class Sources:
     layer: IntArray
     weight: FloatArray
     direction: FloatArray | None = None  # (N, 3) unit vectors; None = isotropic (S9b: hand-off)
+    time_ps: FloatArray | None = None  # start time per packet (S7b: excitation + lifetime delay)
 
 
 @dataclass
@@ -181,11 +184,12 @@ def simulate(
             "mom",
             "mmv",
             "nmv",
+            "t0",
         )
     }
     absorbed = np.zeros(nl)
     agrid = np.zeros((grid.nr, grid.nz)) if grid else None
-    ev: dict[str, list[FloatArray]] = {k: [] for k in ("x", "y", "z", "layer", "dw")}
+    ev: dict[str, list[FloatArray]] = {k: [] for k in ("x", "y", "z", "layer", "dw", "opl")}
     sev: dict[str, list[FloatArray]] = {
         k: [] for k in ("x", "y", "z", "layer", "w", "ux", "uy", "uz", "opl")
     }
@@ -229,6 +233,11 @@ def simulate(
         mom = np.zeros((m, nl))
         mmv = np.zeros((m, nl))
         nmv = np.zeros((m, nl))
+        t0: FloatArray = (
+            np.asarray(sources.time_ps[done - m : done], dtype=np.float64)
+            if sources is not None and sources.time_ps is not None
+            else np.zeros(m)
+        )
         nsc = np.zeros(m, dtype=np.int64)
         zmax = np.zeros(m)
         s_left = np.zeros(m)
@@ -262,6 +271,7 @@ def simulate(
             mom: FloatArray = mom,
             mmv: FloatArray = mmv,
             nmv: FloatArray = nmv,
+            t0: FloatArray = t0,
         ) -> None:
             wout = w[ids]
             if mbl:
@@ -280,6 +290,7 @@ def simulate(
                 ("mom", mom[ids]),
                 ("mmv", mmv[ids]),
                 ("nmv", nmv[ids]),
+                ("t0", t0[ids]),
             ):
                 out[key].append(np.asarray(val))
 
@@ -359,6 +370,7 @@ def simulate(
                             ("z", z[ib]),
                             ("layer", lb.astype(np.float64)),
                             ("dw", dw),
+                            ("opl", path[ib] @ n_layer),
                         ):
                             ev[key].append(np.asarray(val, dtype=np.float64))
                     w[ib] -= dw
@@ -447,6 +459,7 @@ def simulate(
         cat["mom"].reshape(-1, nl),
         cat["mmv"].reshape(-1, nl) if tagging else None,
         cat["nmv"].reshape(-1, nl).astype(np.int64) if tagging else None,
+        cat["t0"] if sources is not None and sources.time_ps is not None else None,
     )
     scatter_events = None
     if record_scattering is True:
