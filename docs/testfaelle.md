@@ -633,3 +633,9 @@ dyadischen Green-Funktion, bornwolf1999), dieselbe Realisierung wie in der BWPM.
   konstant), und die Statistik je Winkel ist zu klein. Dafür braucht es feine Gitter und viele
   Realisierungen (Server). Die Leistung nach Rückstreuung wird mit `plane_wave_power(Feld)`
   ausgewertet (die Funktion transformiert selbst).
+- **Werkzeug für S9c-4b:** `tools/backscatter_bwpm.py` (Satz A: L = 2 µm, h = 0,1 / 0,05 /
+  0,025 µm; Satz B: L = 40 µm gegen Monte Carlo; σ_n = 0,0143; Kasten 12,8 µm; dR/dΩ in |cos θ|
+  0,3–0,9). Lokale Probe (Satz A, h = 0,1 µm, 4 Realisierungen): BWPM/diskretes Born 0,99–1,03
+  je Bin, diskretes/kontinuierliches Born 0,84–1,10 und 1,9 im Bin 0,8–0,9 (Gitterfeld und Rand
+  der Schicht) – die Abweichung vom kontinuierlichen Born kommt aus der Darstellung des Feldes,
+  nicht aus der BWPM.
