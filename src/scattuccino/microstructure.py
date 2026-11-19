@@ -6,8 +6,11 @@ power spectral density (3D, Φ(q) = (2π)⁻³ ∫ C(r) e^(−iq·r) d³r)
     Φ(q) = σ_n² l_c³ Γ(D/2) / (π^(3/2) |Γ((D − 3)/2)| (1 + q² l_c²)^(D/2)),   3 < D < 6,
 
 D = 4 being the exponential correlation C(r) = σ_n² e^(−r/l_c). First-order Born approximation
-for a scalar wave in n₀ + δn (k = n₀k₀): differential scattering coefficient per unit volume and
-solid angle σ(θ) = (2π k⁴/n₀²) Φ(2k sin(θ/2)), μs = ∫ σ dΩ, p(θ) = σ/μs.
+in n₀ + δn (k = n₀k₀): differential scattering coefficient per unit volume and solid angle
+σ(θ) = (2π k⁴/n₀²) Φ(2k sin(θ/2)) for a scalar wave; for the electromagnetic wave (dyadic Green's
+function) times the dipole factor 1 − sin²θ cos²φ (linear polarisation, φ from the polarisation
+direction), averaged over φ – and for unpolarised light – (1 + cos²θ)/2 (S9b-7, bohren1983,
+Rayleigh–Gans). μs = ∫ σ dΩ, p(θ) = σ/μs.
 
 The field is generated on a periodic grid by filtering white noise with √Φ (exact second-order
 statistics on the grid) and handed to BWPM as labels of a quantised index.
@@ -47,12 +50,21 @@ class BornScattering:
 
 
 def born(
-    medium: WhittleMatern, n0: float, wavelength_um: float, n_mu: int = 20_001
+    medium: WhittleMatern,
+    n0: float,
+    wavelength_um: float,
+    n_mu: int = 20_001,
+    vector: bool = True,
 ) -> BornScattering:
+    """First Born approximation (module docstring): μs (1/mm), g and the tabulated phase function
+    (per sr). vector: with the dipole factor (1 + cos²θ)/2 of the electromagnetic wave (azimuthal
+    mean, unpolarised); False: scalar wave (S9b-2)."""
     k = 2 * np.pi * n0 / (wavelength_um * 1e-3)
     mu = np.unique(np.cos(np.pi * np.linspace(0, 1, n_mu) ** 2)).astype(np.float64)
     q = 2 * k * np.sqrt(np.clip((1 - mu) / 2, 0, None))
     sigma = 2 * np.pi * k**4 / n0**2 * medium.psd(q)
+    if vector:
+        sigma = sigma * (1 + mu**2) / 2
     mus = float(2 * np.pi * np.trapezoid(sigma, mu))
     tab = Tabulated(mu, sigma)
     return BornScattering(mus, tab.g, tab)
@@ -112,7 +124,9 @@ def calibrate_with_bwpm(
     """Propagate a plane wave through one realisation in BWPM (forward FPWPM) and measure the
     extinction of the coherent field (μs) and the angular distribution of the scattered field
     (g, forward half). The coherent power is fitted where it lies between fit_range (fractions);
-    a laterally finite box leaves a floor of about 1/(number of speckles)."""
+    a laterally finite box leaves a floor of about 1/(number of speckles). The power of each
+    scattered plane wave includes the longitudinal component, |E|² = |E⊥|² + |E_z|² with
+    E_z = −k⊥·E⊥/k_z (transversality; S9b-7, BWPM K17 hint). Reference: vector Born."""
     from bwpm import fast
     from bwpm.volume3d import Bidirectional3D, Grid3D
 
@@ -147,9 +161,7 @@ def calibrate_with_bwpm(
     kp2 = kxx**2 + kyy**2
     prop = kp2 < k**2
     ct = np.sqrt(np.clip(1 - kp2 / k**2, 0, 1))
-    s = np.zeros((ny, nx))
-    for comp in range(2):
-        s += np.abs(np.fft.fft2(f[:, :, comp] - np.mean(f[:, :, comp]))) ** 2
+    s = plane_wave_power(f, kxx, kyy, k)
     # power per solid angle ∝ |F|² cos²θ; a k⊥ cell covers dΩ = dk⊥²/(k² cos θ), so the weight of
     # the cell in an average over directions is |F|² cos θ (found in the S9b-2 server runs)
     w = np.where(prop, s * ct, 0.0)
@@ -163,6 +175,23 @@ def calibrate_with_bwpm(
     theta_min = 2 * (2 * np.pi / (nx * spacing)) / k
     phase = _measured_phase(ct[prop], w[prop], b, n_bins, mus_fit, float(theta_min))
     return Calibration(depths, c, np.array(tot), mus_fit, g_fwd, b, g_b, phase)
+
+
+def plane_wave_power(
+    f: np.ndarray,  # type: ignore[type-arg]
+    kxx: FloatArray,
+    kyy: FloatArray,
+    k: float,
+) -> FloatArray:
+    """|F{E}|² per k⊥ cell of the scattered field f (ny, nx, 2) (mean removed): transverse
+    components plus E_z = −(k_x E_x + k_y E_y)/k_z of each propagating plane wave (zero for
+    evanescent cells, which carry no power)."""
+    fx = np.fft.fft2(f[:, :, 0] - np.mean(f[:, :, 0]))
+    fy = np.fft.fft2(f[:, :, 1] - np.mean(f[:, :, 1]))
+    kz2 = k**2 - kxx**2 - kyy**2
+    with np.errstate(divide="ignore", invalid="ignore"):
+        fz2 = np.where(kz2 > 0, np.abs(kxx * fx + kyy * fy) ** 2 / kz2, 0.0)
+    return np.asarray(np.abs(fx) ** 2 + np.abs(fy) ** 2 + fz2)
 
 
 def _measured_phase(

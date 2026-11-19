@@ -63,3 +63,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   Wigner-Funktion des Gaußstrahls (`hybrid.gaussian_beam_packets`), nur der Rest über Husimi;
   `hybrid_oct(coherent="wigner")` (Standard, `"husimi"` wie bisher), `HybridResult.power_coherent`;
   Test T18 (Einfachstreuung im engen Fokus gegen geschlossene Form).
+- S9b-7: vektorielle Born-Referenz `microstructure.born(vector=True)` (Standard, Dipolfaktor
+  (1 + cos²θ)/2; `vector=False` skalar wie bisher) und Leistung der gestreuten ebenen Wellen mit E_z
+  (`microstructure.plane_wave_power`) in `calibrate_with_bwpm` und `tools/calibrate_bwpm.py`, nach
+  BWPM K17/E9; Test T16c, g-Vergleich mit der BWPM als bekannte Abweichung (`xfail`). D9 ergänzt:
+  Monte Carlo im Hybrid mit vektoriellem Born, gemessene Werte als Diagnose, solange BWPM #37 offen
+  ist.

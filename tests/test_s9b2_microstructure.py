@@ -15,6 +15,7 @@ from scattuccino.microstructure import (
     WhittleMatern,
     born,
     calibrate_with_bwpm,
+    plane_wave_power,
     quantise,
     random_field,
 )
@@ -24,7 +25,7 @@ LAM, N0 = 0.8, 1.38
 
 def test_born_against_closed_form_for_exponential_correlation() -> None:
     med = WhittleMatern(0.02, 0.5e-3, 4.0)
-    b = born(med, N0, LAM)
+    b = born(med, N0, LAM, vector=False)
     k = 2 * np.pi * N0 / (LAM * 1e-3)
     a = 2 * k**2 * med.l_c**2
     mus = 8 * k**4 * med.sigma_n**2 * med.l_c**3 / (N0**2 * (1 + 2 * a))
@@ -32,6 +33,46 @@ def test_born_against_closed_form_for_exponential_correlation() -> None:
     g_num = quad(lambda m: m / (1 + a * (1 - m)) ** 2, -1, 1, limit=500)[0]
     g_den = quad(lambda m: 1 / (1 + a * (1 - m)) ** 2, -1, 1, limit=500)[0]
     assert abs(b.g - g_num / g_den) < 1e-6
+
+
+def test_vector_born_has_the_dipole_factor() -> None:
+    # S9b-7: σ_vec = σ_scalar (1 + cos²θ)/2 (unpolarised); exponential correlation, closed form of
+    # σ_scalar ∝ 1/(1 + a(1 − μ))², integrals by quadrature
+    med = WhittleMatern(0.02, 0.5e-3, 4.0)
+    b = born(med, N0, LAM)
+    k = 2 * np.pi * N0 / (LAM * 1e-3)
+    a = 2 * k**2 * med.l_c**2
+    c = 2 * np.pi * k**4 / N0**2 * med.sigma_n**2 * med.l_c**3 / np.pi**2  # σ at a(1 − μ) = 0
+
+    def shape(m: float) -> float:
+        return (1 + m * m) / 2 / (1 + a * (1 - m)) ** 2
+
+    mus = 2 * np.pi * c * quad(shape, -1, 1, limit=500)[0]
+    g = quad(lambda m: m * shape(m), -1, 1, limit=500)[0] / quad(shape, -1, 1, limit=500)[0]
+    assert abs(b.mus / mus - 1) < 1e-6
+    assert abs(b.g - g) < 1e-6
+    mu = np.array([-1.0, 0.0, 1.0])  # backward and forward unchanged, 90° halved
+    scalar = born(med, N0, LAM, vector=False)
+    ratio = b.phase.pdf(mu) * b.mus / (scalar.phase.pdf(mu) * scalar.mus)
+    assert np.allclose(ratio, [1.0, 0.5, 1.0], rtol=1e-6)
+
+
+def test_plane_wave_power_includes_e_z() -> None:
+    # a plane wave at 40° in the x–z plane, E ⊥ k (p-polarised): |E|² = |E_x|²/cos²θ; s-polarised
+    # (E along y): |E|² = |E_y|²
+    n, h = 64, 1e-4
+    k = 2 * np.pi * N0 / (LAM * 1e-3)
+    kx = 2 * np.pi * np.fft.fftfreq(n, h)
+    kxx, kyy = np.meshgrid(kx, kx)
+    m = round(float(k * np.sin(np.radians(40)) * n * h / (2 * np.pi)))
+    cos_t = np.sqrt(1 - (kx[m] / k) ** 2)
+    x = np.arange(n) * h
+    wave = np.exp(1j * kx[m] * x)[None, :] * np.ones((n, 1))
+    for comp, expected in ((0, 1 / cos_t**2), (1, 1.0)):
+        f = np.zeros((n, n, 2), dtype=np.complex128)
+        f[:, :, comp] = wave
+        s = plane_wave_power(f, kxx, kyy, k)
+        assert abs(s[0, m] / n**4 - expected) < 1e-9 and abs(s.sum() - s[0, m]) < 1e-9 * s[0, m]
 
 
 def test_random_field_statistics() -> None:
@@ -60,15 +101,29 @@ def test_random_field_statistics() -> None:
 
 def test_bwpm_realisation_reproduces_born() -> None:
     pytest.importorskip("bwpm")
-    med = WhittleMatern(0.0572, 0.5e-3, 4.0)  # Born μs ≈ 200/mm, g ≈ 0.935
+    med = WhittleMatern(0.0572, 0.5e-3, 4.0)  # vector Born μs ≈ 190/mm, g ≈ 0.948
     cal = calibrate_with_bwpm(
         med, N0, LAM, (60, 96, 96), 1e-4, np.random.default_rng(1), keep_every=20
     )
-    assert abs(cal.mus_fit / cal.born.mus - 1) < 0.2  # one small realisation
-    assert (
-        abs(cal.g_forward - cal.g_forward_born) < 0.02
-    )  # 0.934 vs 0.946 (μs z = 0.4: some multiple scattering)
+    # one small realisation; measured 1.010 against vector Born (0.960 against scalar Born). The
+    # FPWPM conserves the transverse norm, so its extinction is ∫ σ r²/cos θ dΩ (BWPM K17 point 8):
+    # 1.028 × vector Born – the closeness to vector Born is no proof of vector scattering
+    assert abs(cal.mus_fit / cal.born.mus - 1) < 0.1
     assert np.all(np.abs(cal.total - 1) < 0.02)  # forward FPWPM conserves power
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="BWPM E9 (K17): the FPWPM scatters the p part too strongly at large angles "
+    "(r/cos²θ); full field against vector Born gives g_forward 0.913 vs 0.955",
+)
+def test_bwpm_realisation_reproduces_born_g() -> None:
+    pytest.importorskip("bwpm")
+    med = WhittleMatern(0.0572, 0.5e-3, 4.0)
+    cal = calibrate_with_bwpm(
+        med, N0, LAM, (60, 96, 96), 1e-4, np.random.default_rng(1), keep_every=20
+    )
+    assert abs(cal.g_forward - cal.g_forward_born) < 0.02  # μs z = 0.4: some multiple scattering
 
 
 def test_measured_phase_function_for_the_monte_carlo() -> None:

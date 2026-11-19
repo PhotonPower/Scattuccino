@@ -14,7 +14,7 @@ prüfen).
 | ramellaroman2005 | J. C. Ramella-Roman, S. A. Prahl, S. L. Jacques, Opt. Express 13 (2005) | Z | S6 |
 | boas1997 | D. A. Boas, A. G. Yodh, J. Opt. Soc. Am. A 14 (1997) | Z | S8 |
 | thrane2000 | L. Thrane, H. T. Yura, P. E. Andersen, J. Opt. Soc. Am. A 17 (2000) | Z | S9 |
-| bohren1983 | C. F. Bohren, D. R. Huffman, Absorption and Scattering of Light by Small Particles (1983) | Z | S3 Mie |
+| bohren1983 | C. F. Bohren, D. R. Huffman, Absorption and Scattering of Light by Small Particles (1983) | Z | S3 Mie; S9b-7: Rayleigh-Gans-Dipolfaktor (1 + cos²θ)/2 der vektoriellen Born-Näherung |
 | chandrasekhar1960 | S. Chandrasekhar, Radiative Transfer, Dover (1960), Kap. V (H-Funktion, Reflexion des halbunendlichen Mediums) | Z | S1 Referenz T1b |
 | vandehulst1980 | H. C. van de Hulst, Multiple Light Scattering, Academic Press (1980) – Werte für R_d, T_d zitiert nach wang1995 | Z | Literaturfall T1c |
 | egan1979 | W. G. Egan, T. W. Hilgeman, Optical Properties of Inhomogeneous Materials (1979) – Näherung r_d(n), zitiert nach farrell1992 | Z | S2 Randkoeffizient A |
@@ -23,4 +23,5 @@ prüfen).
 | mackintosh1989 | F. C. MacKintosh, J. X. Zhu, D. J. Pine, D. A. Weitz, „Polarization memory of multiply scattered light“, Phys. Rev. B 40 (1989) | Z | S6: Polarisationsgedächtnis |
 | bandyopadhyay2005 | R. Bandyopadhyay et al., „Speckle-visibility spectroscopy: A tool to study time-varying dynamics“, Rev. Sci. Instrum. 76 (2005) | Z | S8: Speckle-Kontrast |
 | bastiaans1978 | M. J. Bastiaans, „The Wigner distribution function applied to optical signals and systems“, Opt. Commun. 25 (1978) 26–30 | Z | S9b-6: Wigner-Funktion des Gaußstrahls, freie Ausbreitung als Scherung |
+| bornwolf1999 | M. Born, E. Wolf, Principles of Optics, 7. Aufl., Cambridge (1999) – erste Born-Näherung, Transversalität ebener Wellen (E_z = −k⊥·E⊥/k_z) | Z | S9b-7 |
 | yao1999 | G. Yao, L. V. Wang, „Monte Carlo simulation of an optical coherence tomography signal in homogeneous turbid media“, Phys. Med. Biol. 44 (1999) | Z | S9: Monte-Carlo-OCT |
