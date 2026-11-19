@@ -77,6 +77,8 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   BWPM K17/E9; Test T16c, g-Vergleich mit der BWPM als bekannte Abweichung (`xfail`). D9 ergänzt:
   Monte Carlo im Hybrid mit vektoriellem Born, gemessene Werte als Diagnose, solange BWPM #37 offen
   ist.
+- S7c: Emissionsspektren (`simulate_fluorescence_spectrum`, `SpectralFluorescenceResult`): Emission
+  in Wellenlängen-Bins mit eigenen optischen Eigenschaften, eine Anregung für alle Bins; Test T8c.
 - S7b: Fluoreszenzlebensdauer (`simulate_fluorescence(lifetime_ps=…)`): Start der Emission zur Zeit
   der Anregung plus exponentielle Verzögerung; `events["opl"]`, `Sources.time_ps`,
   `Protocol.time_offset_ps`; Test T8b (Zeit- und Frequenzbereich).

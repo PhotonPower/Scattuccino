@@ -26,6 +26,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T7d | Benchmarks von Ramella-Roman, Prahl, Jacques (2005) | Literatur (Volltext nötig) | S6 | ○ |
 | T8 | Fluoreszenz und Raman: ohne Streuung gegen geschlossene Lösung; Energie der Emission; vorwärts gegen adjungiert (Fluchtfunktion); räumlich versetzte Detektion (SORS) | E₂-Integral; exakt; unabhängige Läufe; Verhalten | S7a | ✅ |
 | T8b | Fluoreszenzlebensdauer: Zeitpunkt der Anregung (opl = n z ohne Streuung), Verzögerung je Austritt exponentiell, Frequenzbereich F_τ/F_0 = 1/(1 + iωτ) (Phase, Modulation) | exakt (Faltung mit e^(−t/τ)/τ); lakowicz2006 | S7b | ✅ |
+| T8c | Emissionsspektrum: ohne Streuung je Wellenlängen-Bin gegen geschlossene Form (Inner-Filter-Effekt), eine Anregung für alle Bins, Energie je Bin, gleiche Bins = eine Wellenlänge | exakt; Monte Carlo | S7c | ✅ |
 | T9 | Dynamik: Impulsübertrag (⟨1 − cos θ⟩ = 1 − g), DCS gegen Korrelationsdiffusion, Speckle-Kontrast gegen geschlossene Form, Tiefenempfindlichkeit in zwei Schichten | exakt; Boas & Yodh; Bandyopadhyay | S8a | ✅ |
 | T9b | Laser-Doppler: gekennzeichnete bewegte Streuer, g1 mit unverschobenem Anteil gegen Gl. 22 (P_m aus dem Protokoll, I₁ aus Gl. 2), Referenz bonner1981 gegen eigene Quadraturen, Spektrum und erster Moment | bonner1981 | S8b | ✅ |
 | T10a | OCT (Intensitätsmodell): Einfach-Rückstreuung gegen exaktes Integral; Kohärenz-Gating erhält das Signal; Anteil der Mehrfachstreuung und Beer-Gesetz des OCT | exakt; Integral; Verhalten | S9a | ✅ |
@@ -327,6 +328,25 @@ einer exponentiellen Verzögerung mit Lebensdauer τ aus einem eigenen Zufallsst
 - Frequenzbereich: F_τ(ω)/F_0(ω) gegen 1/(1 + iωτ) innerhalb 4 σ (σ aus der Varianz von e^(−iωd));
   gemessen tan φ = 0,303 / 1,008 / 3,065 und Modulation 0,957 / 0,705 / 0,318 bei ωτ = 0,3 / 1 / 3
   (erwartet ωτ und 0,958 / 0,707 / 0,316).
+
+## T8c: Emissionsspektren (S7c)
+
+`simulate_fluorescence_spectrum(stack_x, stacks_m, spectrum, …)`: Die Emission wird in
+Wellenlängen-Bins mit dem normierten Spektrum f_b aufgeteilt; Bin b trägt Q f_b × Absorption des
+Fluorophors und wird mit seinen optischen Eigenschaften transportiert (Re-Absorption je
+Wellenlänge). Eine Anregung für alle Bins; Pakete ∝ f_b. Test `tests/test_s7c_spectrum.py`.
+
+- **Ohne Streuung** (μa,x = 0,8 davon μa,f = 0,3 /mm, Q = 0,2; μa,m = 0,8 / 0,4 / 0,1 /mm, f_b =
+  0,2 / 0,5 / 0,3; 1,2·10⁵ Emissionspakete): jedes Bin gegen Q f_b ∫ μa,f e^(−μa,x z) ½E₂(μa,m,b z) dz
+  innerhalb 4 σ. Detektiertes Spektrum 0,12 / 0,44 / 0,43 statt 0,2 / 0,5 / 0,3 – der
+  Inner-Filter-Effekt verschiebt es zu den schwach re-absorbierten Bins.
+- **Eine Anregung:** Fluorophor-Absorption gleich dem Lauf mit einer Wellenlänge (gleicher Seed,
+  bitgleich); Energie je Bin (emittiert = austretend + re-absorbiert) auf 10⁻⁴ – das Russische
+  Roulette erhält die Energie nur im Erwartungswert (gemessen 10⁻⁵).
+- **Gleiche Eigenschaften in allen Bins:** Summe der detektierten Fluoreszenz gleich dem Lauf mit
+  einer Wellenlänge innerhalb 4 σ (unabhängige Läufe).
+- `simulate_fluorescence` (S7a/S7b) ist in Anregung und Emission aufgeteilt; Seeds und Ergebnisse
+  unverändert (Tests T8, T8b grün).
 
 ## T9: Dynamik – DCS und Speckle-Kontrast (S8a)
 
