@@ -13,10 +13,10 @@ prüfen).
 | jacques2013 | S. L. Jacques, „Optical properties of biological tissues: a review“, Phys. Med. Biol. 58 (2013) R37 | Z | S11 |
 | ramellaroman2005 | J. C. Ramella-Roman, S. A. Prahl, S. L. Jacques, Opt. Express 13 (2005) | Z | S6 |
 | boas1997 | D. A. Boas, A. G. Yodh, J. Opt. Soc. Am. A 14 (1997) | Z | S8 |
-| thrane2000 | L. Thrane, H. T. Yura, P. E. Andersen, „Analysis of optical coherence tomography systems based on the extended Huygens–Fresnel principle“, J. Opt. Soc. Am. A 17 (2000) | Z | S9; S9c: EHF-Modell Ψ(z) (Volltext vor Verwendung) |
-| schmitt1997 | J. M. Schmitt, A. Knüttel, „Model of optical coherence tomography of heterogeneous tissue“, J. Opt. Soc. Am. A 14 (1997) | Z | S9c: Modellrahmen, Rückstreuung |
-| lutomirski1971 | R. F. Lutomirski, H. T. Yura, „Propagation of a finite optical beam in an inhomogeneous medium“, Appl. Opt. 10 (1971) | Z | S9c: erweitertes Huygens-Fresnel, Strukturfunktion |
-| levitz2004 | D. Levitz, L. Thrane, M. H. Frosz, P. E. Andersen et al., „Determination of optical scattering properties of highly-scattering media in optical coherence tomography images“, Opt. Express 12 (2004) | Z | S9c: Korrekturen und Anwendung des EHF-Modells |
+| thrane2000 | L. Thrane, H. T. Yura, P. E. Andersen, „Analysis of optical coherence tomography systems based on the extended Huygens–Fresnel principle“, J. Opt. Soc. Am. A 17 (2000) 484–490 | V | S9; S9c-1: Ψ(z) Gl. 21/22 (Druckfehler in Gl. 22: Kreuzterm 4 statt 2, s. levitz2004), w_H, w_S Gl. 13/14, ρ₀ Gl. A1–A7, spiegelnd Gl. 25/26, Abb. 2/3 |
+| schmitt1997 | J. M. Schmitt, A. Knüttel, „Model of optical coherence tomography of heterogeneous tissue“, J. Opt. Soc. Am. A 14 (1997) 1231–1242 | Z | S9c: Modellrahmen, Rückstreuung |
+| lutomirski1971 | R. F. Lutomirski, H. T. Yura, „Propagation of a finite optical beam in an inhomogeneous medium“, Appl. Opt. 10 (1971) 1652–1658 | Z (Volltext liegt vor) | S9c: erweitertes Huygens-Fresnel, Strukturfunktion |
+| levitz2004 | D. Levitz, L. Thrane, M. H. Frosz, P. E. Andersen et al., „Determination of optical scattering properties of highly-scattering media in optical coherence tomography images“, Opt. Express 12 (2004) 249–259 | V (Abschnitt 2) | S9c-1: Ψ(z) Gl. 2 mit Kreuzterm 4, θ_rms als e⁻¹-Halbwertsbreite der Vorwärtskeule, g_eff = cos θ_rms |
 | bohren1983 | C. F. Bohren, D. R. Huffman, Absorption and Scattering of Light by Small Particles (1983) | Z | S3 Mie; S9b-7: Rayleigh-Gans-Dipolfaktor (1 + cos²θ)/2 der vektoriellen Born-Näherung |
 | chandrasekhar1960 | S. Chandrasekhar, Radiative Transfer, Dover (1960), Kap. V (H-Funktion, Reflexion des halbunendlichen Mediums) | Z | S1 Referenz T1b |
 | vandehulst1980 | H. C. van de Hulst, Multiple Light Scattering, Academic Press (1980) – Werte für R_d, T_d zitiert nach wang1995 | Z | Literaturfall T1c |
