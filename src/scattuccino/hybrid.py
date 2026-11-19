@@ -4,8 +4,9 @@ Decisions D8–D10 (`docs/entwurf-s9b-hybrid.md`):
 
 1. A Gaussian beam focused into the tissue (waist w_f at depth z_f, medium index n₀) enters a
    BWPM volume holding one realisation of the microstructure (`microstructure.random_field`)
-   from z = 0 to the hand-off depth z_h (forward FPWPM; the reflection of this region is not part
-   of the depth-resolved signal below z_h).
+   from z = 0 to the hand-off depth z_h (forward FPWPM; δn as index steps or, S9b-8, as the
+   vector Born increment; the reflection of this region is not part of the depth-resolved signal
+   below z_h).
 2. The field at z_h becomes photon packets (S9b-6): its projection c·E_G onto the incident beam
    propagated freely to z_h (`split_coherent`) is coherent light – packets from the exact Wigner
    function of the Gaussian beam (`gaussian_beam_packets`), no smoothing; the orthogonal rest
@@ -30,7 +31,7 @@ import numpy as np
 
 from scattuccino._types import FloatArray
 from scattuccino.layers import Layer, Stack
-from scattuccino.microstructure import WhittleMatern, born, quantise, random_field
+from scattuccino.microstructure import WhittleMatern, born, bwpm_medium, random_field
 from scattuccino.phase import PhaseFunction
 from scattuccino.transport import Sources, simulate
 
@@ -193,6 +194,7 @@ def hybrid_oct(
     acceptance: tuple[float, float] | None = None,
     scattering: tuple[float, PhaseFunction] | None = None,
     coherent: str = "wigner",
+    model: str = "steps",
 ) -> HybridResult:
     """scattering: (μs, phase function) for the Monte Carlo below and on the way back above the
     hand-off; default vector Born (D9 amended 2026-11-19: the FPWPM extinction and phase function
@@ -202,7 +204,10 @@ def hybrid_oct(
     coherent: "wigner" (S9b-6) hands the projection onto the beam over through the exact Wigner
     function and only the rest through Husimi (σ = sigma_husimi); "husimi" hands the whole field
     over through Husimi (S9b-3/4, biased for a tight focus: the smoothing widens the beam by
-    σ² + d²/(4σ²k²) at a distance d behind z_h)."""
+    σ² + d²/(4σ²k²) at a distance d behind z_h).
+
+    model: how δn enters BWPM above z_h, "steps" (quantised index, S9b-2/3, default) or
+    "increment" (vector Born increment, S9b-8); `microstructure.bwpm_medium`."""
     from rtt_fusion.phasespace import field_to_packets
     from rtt_fusion.ports import GriddedField, Port, power
 
@@ -216,9 +221,14 @@ def hybrid_oct(
 
         nz = round(z_h / dx)
         dn = random_field(medium, (nz, nx, nx), dx, rng)
-        lab, idx = quantise(dn, n0)
+        lab, idx, fluct = bwpm_medium(dn, n0, model)
         solver = Bidirectional3D(
-            Grid3D(nx, nx, dx, dx, dx, wavelength_um), idx, lab, complex(n0), None
+            Grid3D(nx, nx, dx, dx, dx, wavelength_um),
+            idx,
+            lab,
+            complex(n0),
+            None,
+            fluctuation=fluct,
         )
         res = fast.run_3d(solver, e0, iterations=0, keep=(nz,), backend=backend)
         e_h = res.planes[nz][0]

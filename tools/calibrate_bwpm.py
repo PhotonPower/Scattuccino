@@ -127,6 +127,7 @@ def run_one(
     levels: int,
     depth_mus: float,
     phase_csv: Path | None = None,
+    model: str = "steps",
 ) -> dict[str, object]:
     from bwpm import fast
     from bwpm.volume3d import Bidirectional3D, Grid3D
@@ -140,15 +141,20 @@ def run_one(
     keep = tuple(range(0, nz + 1, keep_every))
     t0 = time.time()
     dn = ms.random_field(med, (nz, n, n), spacing, np.random.default_rng(seed))
-    lab, idx = ms.quantise(dn, N0, levels)
+    lab, idx, fluct = ms.bwpm_medium(dn, N0, model, levels)
     var_ratio = float(np.var(dn) / sigma**2)
-    q_err = float(np.std(np.asarray(idx)[lab] - N0 - dn))  # rms quantisation error
-    del dn
+    # rms quantisation error (0 for the Born increment)
+    q_err = 0.0 if fluct is not None else float(np.std(np.asarray(idx)[lab] - N0 - dn))
     t_field = time.time() - t0
     solver = Bidirectional3D(
-        Grid3D(n, n, spacing, spacing, spacing, WAVELENGTH_UM), idx, lab, complex(N0), None
+        Grid3D(n, n, spacing, spacing, spacing, WAVELENGTH_UM),
+        idx,
+        lab,
+        complex(N0),
+        None,
+        fluctuation=fluct,
     )
-    del lab
+    del lab, dn, fluct
     e = np.zeros((n, n, 2), dtype=np.complex128)
     e[:, :, 0] = 1.0
     with GpuPeak() as gpu:
@@ -204,7 +210,8 @@ def run_one(
         "seed": seed,
         "n_lateral": n,
         "nz": nz,
-        "levels": levels,
+        "model": model,
+        "levels": levels if model == "steps" else 0,
         "spacing_um": spacing * 1e3,
         "depth_um": nz * spacing * 1e3,
         "keep_every": keep_every,
@@ -262,7 +269,8 @@ def main() -> None:
     r.add_argument("--d", type=float, default=4.0)
     r.add_argument("--seed", type=int, default=1)
     r.add_argument("--n", type=int, default=512, help="lateral grid points")
-    r.add_argument("--levels", type=int, default=16, help="index quantisation levels")
+    r.add_argument("--levels", type=int, default=16, help="index steps (--model steps)")
+    r.add_argument("--model", choices=("increment", "steps"), default="steps", help="δn in BWPM")
     r.add_argument("--depth-mus", type=float, default=4.0, help="depth in units of 1/μs")
     r.add_argument("--phase-csv", type=Path, default=None)
     sub.add_parser("table")
@@ -270,7 +278,7 @@ def main() -> None:
     if a.cmd == "table":
         table()
         return
-    row = run_one(a.mus, a.lc, a.d, a.seed, a.n, a.levels, a.depth_mus, a.phase_csv)
+    row = run_one(a.mus, a.lc, a.d, a.seed, a.n, a.levels, a.depth_mus, a.phase_csv, a.model)
     print({k: v for k, v in row.items() if not isinstance(v, list)})
 
 

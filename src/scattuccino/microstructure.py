@@ -13,7 +13,10 @@ direction), averaged over φ – and for unpolarised light – (1 + cos²θ)/2 (
 Rayleigh–Gans). μs = ∫ σ dΩ, p(θ) = σ/μs.
 
 The field is generated on a periodic grid by filtering white noise with √Φ (exact second-order
-statistics on the grid) and handed to BWPM as labels of a quantised index.
+statistics on the grid) and handed to BWPM (`bwpm_medium`): by default as labels of a quantised
+index (S9b-2; the FPWPM then scatters too strongly at large angles, BWPM E9); optionally as a weak
+fluctuation on the host index n₀ with the vector Born increment per slab (S9b-8, BWPM B7) – not
+yet the default: for σ_n ≈ 0.06 the increment pumps power into near-grazing waves (T16c).
 
 Units: mm (lengths, l_c, wavenumbers in 1/mm), µm for the wavelength.
 """
@@ -91,6 +94,24 @@ def quantise(dn: FloatArray, n0: float, levels: int = 64) -> tuple[IntArray, lis
     return lab, [complex(n0 + lo + j * step) for j in range(levels)]
 
 
+def bwpm_medium(
+    dn: FloatArray, n0: float, model: str = "steps", levels: int = 64
+) -> tuple[IntArray, list[complex], FloatArray | None]:
+    """(labels, indices, fluctuation) for `bwpm.volume3d.Bidirectional3D`.
+
+    "steps" (default, S9b-2): δn quantised to `levels` index steps (`quantise`), propagated by the
+    FPWPM at the steps (limit BWPM E9). "increment" (S9b-8): one host index n₀ (all labels 0) and
+    δn as the weak fluctuation, added in every forward slab with the vector Born increment (BWPM
+    B7, specification §10; checked there to σ_n ≈ 0.03; unstable for near-grazing waves at
+    σ_n ≈ 0.06, T16c)."""
+    if model == "increment":
+        return np.zeros(dn.shape, dtype=np.int64), [complex(n0)], dn
+    if model == "steps":
+        lab, idx = quantise(dn, n0, levels)
+        return lab, idx, None
+    raise ValueError("model must be 'increment' or 'steps'")
+
+
 @dataclass
 class Calibration:
     depths: FloatArray  # mm
@@ -120,21 +141,28 @@ def calibrate_with_bwpm(
     backend: str = "auto",
     fit_range: tuple[float, float] = (0.9, 0.05),
     n_bins: int = 90,
+    model: str = "steps",
 ) -> Calibration:
     """Propagate a plane wave through one realisation in BWPM (forward FPWPM) and measure the
     extinction of the coherent field (μs) and the angular distribution of the scattered field
     (g, forward half). The coherent power is fitted where it lies between fit_range (fractions);
     a laterally finite box leaves a floor of about 1/(number of speckles). The power of each
     scattered plane wave includes the longitudinal component, |E|² = |E⊥|² + |E_z|² with
-    E_z = −k⊥·E⊥/k_z (transversality; S9b-7, BWPM K17 hint). Reference: vector Born."""
+    E_z = −k⊥·E⊥/k_z (transversality; S9b-7, BWPM K17 hint). Reference: vector Born. `model`:
+    how δn enters BWPM (`bwpm_medium`)."""
     from bwpm import fast
     from bwpm.volume3d import Bidirectional3D, Grid3D
 
     nz, ny, nx = shape
     dn = random_field(medium, shape, spacing, rng)
-    lab, idx = quantise(dn, n0)
+    lab, idx, fluct = bwpm_medium(dn, n0, model)
     solver = Bidirectional3D(
-        Grid3D(nx, ny, spacing, spacing, spacing, wavelength_um), idx, lab, complex(n0), None
+        Grid3D(nx, ny, spacing, spacing, spacing, wavelength_um),
+        idx,
+        lab,
+        complex(n0),
+        None,
+        fluctuation=fluct,
     )
     e = np.zeros((ny, nx, 2), dtype=np.complex128)
     e[:, :, 0] = 1.0
