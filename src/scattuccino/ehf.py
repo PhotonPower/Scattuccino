@@ -1,4 +1,5 @@
-"""Extended Huygens-Fresnel model of the OCT signal, closed form (stage S9c-1, D11 A).
+"""Extended Huygens-Fresnel model of the OCT signal: closed form (S9c-1, D11 A) and general form
+with the phase function of the medium (S9c-2, D11 B).
 
 Thrane, Yura and Andersen (thrane2000): mean square heterodyne signal from a discontinuity at
 depth z (diffuse or specular reflection) behind tissue with small-angle forward scattering,
@@ -14,9 +15,11 @@ thrane2000 Eq. 21 (and printed in levitz2004 Eq. 2); thrane2000 Eq. 22 prints 2 
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Literal
 
 import numpy as np
+from scipy.special import j0
 
 from scattuccino._types import FloatArray
 
@@ -97,3 +100,78 @@ def heterodyne_efficiency(
     if reflection == "specular":
         return np.asarray(e * e + (1 - e * e) * q)
     return np.asarray(e * e + 4 * e * (1 - e) / (1 + 1 / q) + (1 - e) ** 2 * q)
+
+
+# S9c-2 (D11 B): general form with the phase function of the medium.
+#
+# The mean irradiance of a beam U(p) = exp(−a p²) launched at the surface (index-matched medium,
+# wavenumber k in the medium) at depth z is lutomirski1971 Eq. 10, the Fourier transform of
+# M_s(ϱ, z) W(ϱ) with W(ϱ) = ∫ U(r + ϱ/2) U*(r − ϱ/2) e^(ikϱ·r/z) d²r ∝ exp(−ϱ²/(2A²)). The
+# heterodyne signal from a δ-correlated reflector at z is the overlap of the mean irradiances of
+# the illumination and of the detection mode (thrane2000 Eqs. 11, 15, 16; the same beam by
+# reciprocity), by Parseval ∝ ∫ M_s² |W|² d²ϱ; Ψ normalises it to M_s = 1.
+
+
+def overlap_width(z: float, a: complex, k: float) -> float:
+    """A (mm) of |W(ϱ)|² ∝ exp(−ϱ²/A²) for U = exp(−a p²) at the surface (Re a > 0):
+    1/A² = α + (k/z − 2β)²/(4α), a = α + iβ (Gaussian integral over r)."""
+    alpha, beta = a.real, a.imag
+    return float(1 / np.sqrt(alpha + (k / z - 2 * beta) ** 2 / (4 * alpha)))
+
+
+def phase_correlation(
+    phase: object, k: float, rho_max: float, n_rho: int = 4001, n_theta: int = 20_001
+) -> Callable[[FloatArray], FloatArray]:
+    """b(ρ): small-angle phase correlation of a medium with phase function p (per sr) and
+    wavenumber k (1/mm) in the medium, b(ρ) = 2π ∫₀^(π/2) p(cos θ) J₀(kρ sin θ) sin θ dθ –
+    lutomirski1971 Eq. 11 with the scattered wave vector k sin θ in place of the spectrum (the
+    forward half only: backscattered light leaves the beam, b(0) = forward fraction). Tabulated on
+    0 ≤ ρ ≤ rho_max (mm), zero beyond."""
+    theta = np.linspace(0.0, np.pi / 2, n_theta)
+    w = phase.pdf(np.cos(theta)) * np.sin(theta)  # type: ignore[attr-defined]
+    w = w * np.gradient(theta) * 2 * np.pi
+    rho = np.linspace(0.0, rho_max, n_rho)
+    b = np.empty(n_rho)
+    for i0 in range(0, n_rho, 64):
+        arg = k * rho[i0 : i0 + 64, None] * np.sin(theta)[None, :]
+        b[i0 : i0 + 64] = j0(arg) @ w
+
+    def table(r: FloatArray) -> FloatArray:
+        return np.asarray(np.interp(r, rho, b, right=0.0))
+
+    return table
+
+
+def spherical_mtf(
+    b: Callable[[FloatArray], FloatArray], mus: float, z: float, n_u: int = 200
+) -> Callable[[FloatArray], FloatArray]:
+    """M_s(ϱ, z) = exp{−μs z [1 − ∫₀¹ b(ϱu) du]} (lutomirski1971 Eq. 11 for spherical waves; the
+    scatterer at depth s sees the separation ϱ(z − s)/z; μs z is the phase variance, thrane2000
+    Eq. 18). Gauss-Legendre in u."""
+    x, wq = np.polynomial.legendre.leggauss(n_u)
+    u, wq = 0.5 * (x + 1), 0.5 * wq
+
+    def mtf(rho: FloatArray) -> FloatArray:
+        r = np.asarray(rho, dtype=np.float64)
+        mean_b = b((r[..., None] * u).reshape(-1)).reshape(r.shape + u.shape) @ wq
+        return np.asarray(np.exp(-mus * z * (1 - mean_b)))
+
+    return mtf
+
+
+def general_efficiency(
+    z: float,
+    a: complex,
+    k: float,
+    mtf: Callable[[FloatArray], FloatArray],
+    n_rho: int = 20_000,
+) -> float:
+    """Ψ(z) = ∫ M_s(ϱ)² e^(−ϱ²/A²) d²ϱ/(πA²) (dimensionless), A from `overlap_width`. With the
+    Gaussian approximation of M_s (thrane2000 Eq. 20) this is the closed form (Eq. 21 integrated)
+    for an aperture at the surface. Quadrature on a logarithmic grid in ϱ (10⁻⁷ A … 10 A)."""
+    big_a = overlap_width(z, a, k)
+    rho = np.geomspace(1e-7 * big_a, 10 * big_a, n_rho)
+    m = mtf(rho)
+    f = m * m * 2 * (rho / big_a) ** 2 * np.exp(-((rho / big_a) ** 2))
+    head = float(m[0] ** 2 * (rho[0] / big_a) ** 2)  # 0 ≤ ϱ < ϱ_min
+    return head + float(np.trapezoid(f, np.log(rho)))

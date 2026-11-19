@@ -63,6 +63,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - S9c-1: geschlossene Form des EHF-Modells nach Thrane (`scattuccino.ehf`: `heterodyne_efficiency`,
   `beam_radii`, `lateral_coherence_length`; diffus und spiegelnd, Shower-Curtain-Effekt), Kreuzterm
   mit Faktor 4 (#36); Test T10b gegen Quadraturen und thrane2000 Abb. 2 und 3.
+- S9c-2: allgemeines EHF mit der Phasenfunktion des Mediums (`ehf.general_efficiency`,
+  `phase_correlation`, `spherical_mtf`, `overlap_width`) für die Geometrie des Hybrids; reproduziert mit
+  Gaußscher MTF die geschlossene Form; Vergleich für das Medium aus #29 dokumentiert (T10b).
 - S9b-6: kohärente Übergabe ohne Husimi-Bias (#31): Projektion des Feldes an der Übergabe auf den
   frei propagierten Strahl (`hybrid.split_coherent`, `hybrid.free_field`), kohärenter Anteil aus der
   Wigner-Funktion des Gaußstrahls (`hybrid.gaussian_beam_packets`), nur der Rest über Husimi;
