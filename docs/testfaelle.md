@@ -25,6 +25,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T7e | Polarisation im C++-Kern je Paket gleich der Python-Referenz (angepasst; Brechzahlsprünge, schräg, elliptisch; Rayleigh-Halbraum) | Python-Referenz | S6c | ✅ |
 | T7d | Benchmarks von Ramella-Roman, Prahl, Jacques (2005) | Literatur (Volltext nötig) | S6 | ○ |
 | T8 | Fluoreszenz und Raman: ohne Streuung gegen geschlossene Lösung; Energie der Emission; vorwärts gegen adjungiert (Fluchtfunktion); räumlich versetzte Detektion (SORS) | E₂-Integral; exakt; unabhängige Läufe; Verhalten | S7a | ✅ |
+| T8b | Fluoreszenzlebensdauer: Zeitpunkt der Anregung (opl = n z ohne Streuung), Verzögerung je Austritt exponentiell, Frequenzbereich F_τ/F_0 = 1/(1 + iωτ) (Phase, Modulation) | exakt (Faltung mit e^(−t/τ)/τ); lakowicz2006 | S7b | ✅ |
 | T9 | Dynamik: Impulsübertrag (⟨1 − cos θ⟩ = 1 − g), DCS gegen Korrelationsdiffusion, Speckle-Kontrast gegen geschlossene Form, Tiefenempfindlichkeit in zwei Schichten | exakt; Boas & Yodh; Bandyopadhyay | S8a | ✅ |
 | T9b | Laser-Doppler: gekennzeichnete bewegte Streuer, g1 mit unverschobenem Anteil gegen Gl. 22 (P_m aus dem Protokoll, I₁ aus Gl. 2), Referenz bonner1981 gegen eigene Quadraturen, Spektrum und erster Moment | bonner1981 | S8b | ✅ |
 | T10a | OCT (Intensitätsmodell): Einfach-Rückstreuung gegen exaktes Integral; Kohärenz-Gating erhält das Signal; Anteil der Mehrfachstreuung und Beer-Gesetz des OCT | exakt; Integral; Verhalten | S9a | ✅ |
@@ -307,6 +308,25 @@ schneller als die vektorisierte Python-Referenz, mit OpenMP über alle Kerne.
 - **SORS:** Raman-aktiv nur die obere Schicht (0,5 mm) oder nur die Schicht darunter: Verhältnis
   tief/oben 0,54 bei 0–0,5 mm Abstand, 3,16 bei 4–6 mm – der tiefe Anteil wächst mit dem Abstand um
   den Faktor 5,8.
+
+## T8b: Fluoreszenzlebensdauer im Zeit- und Frequenzbereich (S7b)
+
+`simulate_fluorescence(lifetime_ps=τ)`: Ein Emissionspaket startet zur Zeit seines
+Anregungsereignisses (optischer Weg / c, neu in den Absorptionsereignissen: `events["opl"]`) plus
+einer exponentiellen Verzögerung mit Lebensdauer τ aus einem eigenen Zufallsstrom;
+`Sources.time_ps`, `Protocol.time_offset_ps`, `Protocol.time_ps` enthält beides. Test
+`tests/test_s7b_lifetime.py`.
+
+- Zeitpunkt der Anregung: Platte ohne Streuung mit angepasster Brechzahl außen, opl = n z für alle
+  Ereignisse mit Gewicht auf 10⁻¹². Bei μs = 0 läuft ein Paket nach der vollständigen Absorption
+  gewichtslos weiter, bis das Roulette es beendet; diese Ereignisse tragen das Gewicht 0.
+- Lebensdauer (Halbraum μs = 10/mm, HG 0,8, n = 1,4; 4·10⁴ Emissionspakete, τ = 2 ns): Transport
+  und Gewichte sind für τ = 0 und τ > 0 gleich, die Zeit jedes Austritts ist um die gezogene
+  Verzögerung später; Mittel 2017 ps und Streuung 2014 ps bei 32 257 Austritten (exponentiell:
+  beide τ).
+- Frequenzbereich: F_τ(ω)/F_0(ω) gegen 1/(1 + iωτ) innerhalb 4 σ (σ aus der Varianz von e^(−iωd));
+  gemessen tan φ = 0,303 / 1,008 / 3,065 und Modulation 0,957 / 0,705 / 0,318 bei ωτ = 0,3 / 1 / 3
+  (erwartet ωτ und 0,958 / 0,707 / 0,316).
 
 ## T9: Dynamik – DCS und Speckle-Kontrast (S8a)
 

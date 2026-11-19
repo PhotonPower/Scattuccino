@@ -77,6 +77,9 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   BWPM K17/E9; Test T16c, g-Vergleich mit der BWPM als bekannte Abweichung (`xfail`). D9 ergänzt:
   Monte Carlo im Hybrid mit vektoriellem Born, gemessene Werte als Diagnose, solange BWPM #37 offen
   ist.
+- S7b: Fluoreszenzlebensdauer (`simulate_fluorescence(lifetime_ps=…)`): Start der Emission zur Zeit
+  der Anregung plus exponentielle Verzögerung; `events["opl"]`, `Sources.time_ps`,
+  `Protocol.time_offset_ps`; Test T8b (Zeit- und Frequenzbereich).
 - S8b: Laser-Doppler mit gekennzeichneten bewegten Streuern (`Layer.moving_fraction`,
   `Layer.phase_moving`, `Protocol.momentum_moving`, `Protocol.n_moving`), `dynamics.g1_tagged`,
   `unshifted_fraction`, `doppler_spectrum`, `mean_frequency`; Referenz nach Bonner und Nossal
