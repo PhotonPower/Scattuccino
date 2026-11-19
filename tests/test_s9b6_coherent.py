@@ -42,7 +42,7 @@ def test_wigner_packets_have_the_moments_of_the_beam() -> None:
         assert abs(np.var(x) / var_x - 1) < 0.015  # 5σ of the sample variance: 1.1 %
         assert abs(np.var(y) / var_x - 1) < 0.015
         assert abs(np.var(u[:, 0] * K) * beam.w_f**2 - 1) < 0.015
-        cov = np.mean(x * u[:, 0]) / (dz * np.var(u[:, 0])) if dz != 0 else 1.0
+        cov = float(np.mean(x * u[:, 0]) / (dz * np.var(u[:, 0]))) if dz != 0 else 1.0
         assert abs(cov - 1) < 0.02
         assert np.allclose(np.linalg.norm(u, axis=1), 1.0) and np.all(u[:, 2] > 0)
 
@@ -101,7 +101,7 @@ def test_single_scattering_in_a_tight_focus() -> None:
     # Measured 0.994–1.016 ± 0.4–2 %; with coherent="husimi" (σ = 0.6 µm) 0.85 → 0.37.
     beam, mus, l_c = Beam(2e-3, 0.012), 1.0, 0.004
     hg = HenyeyGreenstein(0.0)
-    d = np.linspace(0.005, 0.05, 10)
+    d = np.linspace(0.005, 0.05, 10).astype(np.float64)
     runs = [
         hybrid_oct(
             WhittleMatern(0.0572, 0.5e-3),
@@ -135,7 +135,7 @@ def test_coherent_share_behind_the_random_medium() -> None:
     from scattuccino.microstructure import born
 
     med = WhittleMatern(0.0572, 0.5e-3)
-    z = np.linspace(0.0, 0.03, 16)
+    z = np.linspace(0.0, 0.03, 16).astype(np.float64)
     r = hybrid_oct(
         med, N0, 1.0, LAM, Beam(2e-3, 0.004), 0.003, z, 0.004, 20_000, seed=3, nx=96, dx=1.5e-4,
         max_path=0.1, sigma_husimi=0.4e-3,
