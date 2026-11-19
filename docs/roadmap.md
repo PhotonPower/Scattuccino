@@ -62,5 +62,5 @@ OCT-Sonde, die in ein Gewebephantom abbildet (Druckmodell → Sonde → Gewebe �
 | D10 | Detektion in S9b | freigegeben: Modenanpassung im Phasenraum (ballistisches Licht über das Feld) |
 | D11 | Form des EHF in S9c | freigegeben 2026-11-19: geschlossene Form (Thrane) als Prüfstein und allgemeines EHF mit der Phasenfunktion des Mediums als Referenz |
 | D12 | Vergleich Hybrid ↔ EHF | freigegeben 2026-11-19: Verlauf relativ zur Einfachstreuung (Systemkonstante kürzt sich), absolut nur bei kleinem μs z |
-| D13 | Volltexte für S9c | thrane2000, levitz2004 gelesen (2026-11-19); lutomirski1971 vor S9c-2, schmitt1997 vor S9c-3 |
+| D13 | Volltexte für S9c | thrane2000, levitz2004 gelesen (2026-11-19); lutomirski1971 gelesen; schmitt1997 nicht zugänglich, Volumenrückstreuung in S9c-3 eigene Herleitung |
 | D6 | Phantome und Messdaten | Validierung zunächst an Literatur; eigene Phantommessungen, sobald vorhanden |

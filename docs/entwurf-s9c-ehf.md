@@ -1,7 +1,7 @@
 # Entwurf S9c: erweitertes Huygens-Fresnel (EHF) als analytische OCT-Referenz
 
 > Stand 2026-11-19. D11 (Option C) und D12 freigegeben 2026-11-19. D13: thrane2000 und levitz2004
-> im Volltext gelesen; lutomirski1971 liegt vor (für S9c-2); schmitt1997 fehlt noch.
+> im Volltext gelesen; lutomirski1971 gelesen (S9c-2); schmitt1997 nicht zugänglich (keine Lizenz), wird nicht verwendet.
 
 ## Kontext
 
@@ -9,7 +9,7 @@ Der Hybrid (S9b) wird bisher nur in sich geprüft: Unabhängigkeit von der Über
 (T17, Abnahme #34) und Einfachstreuung im engen Fokus gegen eine geschlossene Form (T18). Es fehlt
 eine **unabhängige Referenz für das OCT-Signal mit Fokus und Mehrfachstreuung**. Das liefert das
 EHF-Modell von Thrane, Yura und Andersen (thrane2000), aufbauend auf der EHF-Ausbreitung durch
-Zufallsmedien (lutomirski1971) und dem Modell von Schmitt und Knüttel (schmitt1997):
+Zufallsmedien (lutomirski1971):
 
 - **Annahmen** (thrane2000, Abschnitt 2): Streuung vorwärts unter kleinen Winkeln (paraxial,
   bis etwa 0,5 rad), Volumenrückstreuung vernachlässigt, reflektiert wird an einer Grenzfläche in
@@ -64,10 +64,18 @@ normiert auf die eingestrahlte Leistung; das EHF liefert ⟨i²(z)⟩ bis auf di
 
 ## D13: Volltexte und Abgrenzung
 
-- **Volltexte:** thrane2000 und levitz2004 gelesen (S9c-1). lutomirski1971 für S9c-2;
-  schmitt1997 (Rückstreuung im Volumen statt an einer Grenzfläche) vor S9c-3.
+- **Volltexte:** thrane2000 und levitz2004 (S9c-1), lutomirski1971 (S9c-2) gelesen.
+  schmitt1997 ist nicht zugänglich (keine Lizenz, 2026-11-19) und wird nicht verwendet.
+- **Rückstreuung im Volumen (S9c-3, eigene Herleitung statt schmitt1997):** Das Medium wird in
+  dünne Schichten dz zerlegt. Jede Schicht ist ein δ-korrelierter Reflektor wie in thrane2000
+  Gl. 11 mit dem Rückstreuquerschnitt pro Fläche μs p(cos π) dz (dieselbe Größe wie in der
+  Einfachstreuung von T18); verschiedene Schichten tragen inkohärent bei. Das kohärenzgefensterte
+  Signal ist dann die Faltung des Fensters mit S₁(z′) Ψ(z′)/e^(−2μs z′), S₁ die geschlossene Form
+  der Einfachstreuung aus T18 (mit Absorption). Annahmen: Der Umweg der vorwärts gestreuten
+  Wege (≈ z θ²/2) ist klein gegen die Kohärenzlänge, und Hin- und Rückweg sind statistisch
+  unabhängig (wie thrane2000 Gl. 10). Beides wird im Bericht zu S9c-3 abgeschätzt.
 - **Grenzen des EHF**, die die Vergleiche bestimmen: nur Kleinwinkelstreuung (das Medium aus #29
-  hat g ≈ 0,95; geeignet), Reflexion an einer Grenzfläche statt Rückstreuung im Volumen, keine
+  hat g ≈ 0,95; geeignet), Rückstreuung nur einmal je Weg, keine
   Mehrfachrückstreuung (diffuser Hintergrund fehlt in großer Tiefe). Abweichungen des Hybrids
   **jenseits** dieser Annahmen sind kein Fehler, sondern werden als Befund dokumentiert.
 - **Speckle** (Statistik der einzelnen Realisierung, zweiter Teil von S9c in der Roadmap) folgt
