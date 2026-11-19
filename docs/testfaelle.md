@@ -34,7 +34,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T18 | Kohärente Übergabe: Wigner-Pakete mit den Momenten des Gaußstrahls; Projektion teilt die Leistung exakt; Einfachstreuung im engen Fokus (z_h = 0) gegen geschlossene Form; kohärenter Anteil hinter 3 µm Zufallsmedium gegen e^(−μs z_h) | analytisch; Born | S9b-6 | ✅ |
 | T17 | Hybrid-OCT: Unabhängigkeit von z_h (Server; #29: w_f = 2 µm mit Husimi nicht bestanden, Ursache Husimi-Glättung → S9b-6; Wiederholung mit engem Fokus nach S9b-6), gegen erweitertes Huygens-Fresnel | S9b-4, S9c | ◐ |
 | T16 | Zufallsmedium (Whittle-Matérn): Born gegen geschlossene Form, Feldstatistik, eine BWPM-Realisierung reproduziert Born-μs und g | exakt; Statistik; Born | S9b-2 | ✅ (Kalibrierläufe auf dem Server offen) |
-| T16c | Vektorielle Born-Näherung (Dipolfaktor) gegen geschlossene Form; Leistung ebener Wellen mit E_z; BWPM-Realisierung: μs gegen vektorielles Born, g vorwärts als bekannte Abweichung (BWPM E9, `xfail`) | exakt; vektorielles Born | S9b-7 | ◐ (g: Grenze der FPWPM) |
+| T16c | Vektorielle Born-Näherung (Dipolfaktor) gegen geschlossene Form; Leistung ebener Wellen mit E_z; BWPM-Realisierung: μs gegen vektorielles Born, g vorwärts als bekannte Abweichung (BWPM E9, `xfail`); S9b-8: δn als Born-Inkrement (BWPM B7), Leistungserhaltung als bekannte Abweichung (`xfail`) | exakt; vektorielles Born | S9b-7 | ◐ (g: Grenze der FPWPM) |
 | T11 | Jacobi-Matrizen | finite Differenzen | S10 | ○ |
 | T12 | Phantome | Mikrosphären (Mie exakt), Lipidemulsionen (Literatur) | S11 | ○ |
 
@@ -516,3 +516,23 @@ Die Whittle-Matérn-Phasenfunktion (scharfe Spitze, breiter Fuß) liegt zwischen
 Gaußschen Näherungen; keine trifft sie auf besser als einen Faktor 1,5–3. Ab z ≈ 10 µm dominiert
 nach dem EHF das vorwärts mehrfach gestreute Licht (Ψ ≫ e^(−2μs z)). Das ist die Größe, gegen die
 S9c-3 die Hybriddaten aus #34 vergleicht (D12).
+
+## T16c (Fortsetzung): δn als Born-Inkrement in BWPM (S9b-8)
+
+BWPM B7 (BWPM #29, 2026-11-19): δn je Scheibe als vektorielles Born-Inkrement auf einem Wirt n₀
+statt als Brechzahlstufen; `microstructure.bwpm_medium(model=…)`, Option `model` in
+`calibrate_with_bwpm`, `hybrid_oct` und `tools/calibrate_bwpm.py`. **Standard bleibt `"steps"`.**
+
+- Dieselbe Realisierung wie oben (96² × 60, l_c = 0,5 µm, σ_n = 0,0572, dx = dz = 0,1 µm, Seed 1;
+  BWPM fe2228e, Python-Fallback): Mit Stufen bleibt Σ|E⊥|² auf 0,5 % erhalten, mit dem Inkrement
+  wächst sie auf 1,07 / 1,28 / 2,00 nach 2 / 4 / 6 µm. Die Leistung geht in Wellen nahe dem
+  Grenzwinkel: |E⊥|² bei cos θ < 0,3 ist 0,031 / 0,198 / 0,865 (Stufen 0,0004 / 0,0006 / 0,0010),
+  wo das vektorielle Born kaum hinstreut.
+- Abhängigkeit (Zuwachs von Σ|E⊥|² nach 6 µm): σ_n = 0,0572 / 0,0286 / 0,0143 bei dz = 0,1 µm
+  100 % / 4,8 % / 1,1 %; bei σ_n = 0,0572 und dz = 0,05 / 0,025 µm 18 % / 10 %. Kleineres dz dämpft
+  den Zuwachs, beseitigt ihn nicht. BWPM hat das Inkrement bis σ_n ≈ 0,03 und dz ≤ 0,04 µm geprüft
+  und Wellen nahe dem Grenzwinkel ausdrücklich offen gelassen.
+- Test `test_bwpm_born_increment_conserves_power` (Leistung wie bei den Stufen auf 2 %) als
+  `xfail(strict)` mit Verweis auf BWPM #29; der g-Test mit Stufen bleibt `xfail` (E9). Ist das
+  Inkrement stabil, wird der Standard umgestellt und der g-`xfail` entfernt (Freigabe des
+  Maintainers 2026-11-19).

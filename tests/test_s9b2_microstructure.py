@@ -14,6 +14,7 @@ from scipy.integrate import quad
 from scattuccino.microstructure import (
     WhittleMatern,
     born,
+    bwpm_medium,
     calibrate_with_bwpm,
     plane_wave_power,
     quantise,
@@ -141,3 +142,36 @@ def test_measured_phase_function_for_the_monte_carlo() -> None:
     sigma = phase.pdf(mu_b) * mus
     sigma_born = cal.born.phase.pdf(mu_b) * cal.born.mus
     assert np.all(np.abs(sigma / sigma_born - 1) < 0.05)
+
+
+def test_bwpm_medium_models() -> None:
+    # S9b-8: δn as index steps (default) or as the fluctuation on one host index
+    dn = random_field(WhittleMatern(0.05, 0.5e-3, 4.0), (4, 16, 16), 1e-4, np.random.default_rng(3))
+    lab, idx, fl = bwpm_medium(dn, N0)
+    lab_q, idx_q = quantise(dn, N0)
+    assert fl is None and np.array_equal(lab, lab_q) and idx == idx_q
+    lab, idx, fl = bwpm_medium(dn, N0, "increment")
+    assert idx == [complex(N0)] and not lab.any() and fl is dn
+    with pytest.raises(ValueError):
+        bwpm_medium(dn, N0, "other")
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason="BWPM B7: for σ_n ≈ 0.06 the Born increment pumps power into near-grazing waves "
+    "(|E⊥|² at cos θ < 0.3: 0.03 / 0.20 / 0.87 after 2 / 4 / 6 µm; BWPM #29)",
+)
+def test_bwpm_born_increment_conserves_power() -> None:
+    pytest.importorskip("bwpm.fluctuation")
+    med = WhittleMatern(0.0572, 0.5e-3, 4.0)
+    cal = calibrate_with_bwpm(
+        med,
+        N0,
+        LAM,
+        (60, 96, 96),
+        1e-4,
+        np.random.default_rng(1),
+        keep_every=20,
+        model="increment",
+    )
+    assert np.all(np.abs(cal.total - 1) < 0.02)  # as the index steps above
