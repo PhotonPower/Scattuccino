@@ -48,6 +48,9 @@ class Protocol:
     mua_used: FloatArray  # μa per layer applied in the weights ("mbl": inside `weight`)
     packet: IntArray | None = None  # packet number of each exit (voxel transport, S4/S5)
     momentum: FloatArray | None = None  # (N, layers) Σ (1 − cos θ) per layer (S8, dynamics)
+    # S8b: the same over the events at moving scatterers only, and their number per layer
+    momentum_moving: FloatArray | None = None
+    n_moving: IntArray | None = None
 
     @property
     def total_path(self) -> FloatArray:
@@ -152,11 +155,33 @@ def simulate(
     mus = np.array([layer.mus for layer in stack.layers])
     mut = mus if mbl else mua + mus
     phases = [layer.phase_function for layer in stack.layers]
+    # S8b: tagged moving scatterers (no extra random numbers without them)
+    alpha_mv = np.array([layer.moving_fraction for layer in stack.layers])
+    tagging = bool(np.any(alpha_mv > 0))
+    phases_mv = [
+        layer.phase_moving if layer.phase_moving is not None else layer.phase_function
+        for layer in stack.layers
+    ]
     r_sp_arr, cos_t0 = fresnel_unpolarised(stack.n_above, n_layer[0], np.array([cos_incident]))
     r_sp = float(r_sp_arr[0])
     sin_t0 = stack.n_above / n_layer[0] * np.sqrt(1 - cos_incident**2)
     out: dict[str, list[FloatArray]] = {
-        k: [] for k in ("side", "x", "y", "ux", "uy", "uz", "w", "path", "nsc", "zmax", "mom")
+        k: []
+        for k in (
+            "side",
+            "x",
+            "y",
+            "ux",
+            "uy",
+            "uz",
+            "w",
+            "path",
+            "nsc",
+            "zmax",
+            "mom",
+            "mmv",
+            "nmv",
+        )
     }
     absorbed = np.zeros(nl)
     agrid = np.zeros((grid.nr, grid.nz)) if grid else None
@@ -202,6 +227,8 @@ def simulate(
         alive = np.ones(m, dtype=bool)
         path = np.zeros((m, nl))
         mom = np.zeros((m, nl))
+        mmv = np.zeros((m, nl))
+        nmv = np.zeros((m, nl))
         nsc = np.zeros(m, dtype=np.int64)
         zmax = np.zeros(m)
         s_left = np.zeros(m)
@@ -233,6 +260,8 @@ def simulate(
             nsc: IntArray = nsc,
             zmax: FloatArray = zmax,
             mom: FloatArray = mom,
+            mmv: FloatArray = mmv,
+            nmv: FloatArray = nmv,
         ) -> None:
             wout = w[ids]
             if mbl:
@@ -249,6 +278,8 @@ def simulate(
                 ("nsc", nsc[ids]),
                 ("zmax", zmax[ids]),
                 ("mom", mom[ids]),
+                ("mmv", mmv[ids]),
+                ("nmv", nmv[ids]),
             ):
                 out[key].append(np.asarray(val))
 
@@ -362,13 +393,20 @@ def simulate(
                             sev[key].append(np.asarray(val, dtype=np.float64))
                 xi_s = rng.random(ib.size)
                 ct = np.empty(ib.size)
+                tag = rng.random(ib.size) < alpha_mv[lb] if tagging else np.zeros(ib.size, bool)
                 for li_ in np.unique(lb):
-                    sel_ = lb == li_
+                    sel_ = (lb == li_) & ~tag
                     ct[sel_] = phases[int(li_)].sample(xi_s[sel_])
+                    sel_ = (lb == li_) & tag
+                    if sel_.any():
+                        ct[sel_] = phases_mv[int(li_)].sample(xi_s[sel_])
                 phi = 2 * np.pi * rng.random(ib.size)
                 ux[ib], uy[ib], uz[ib] = _scatter(ux[ib], uy[ib], uz[ib], ct, phi)
                 nsc[ib] += 1
                 mom[ib, lb] += 1.0 - ct
+                if tagging:
+                    mmv[ib[tag], lb[tag]] += 1.0 - ct[tag]
+                    nmv[ib[tag], lb[tag]] += 1.0
                 w_eff = w[ib] * (np.exp(-(path[ib] @ mua)) if mbl else 1.0)
                 low = ib[w_eff < w_threshold]
                 if low.size:
@@ -382,7 +420,13 @@ def simulate(
                 long = idx[alive[idx] & (path[idx].sum(axis=1) > max_path)]
                 alive[long] = False
     cat = {
-        k: (np.concatenate(v) if v else np.zeros((0, nl)) if k in ("path", "mom") else np.zeros(0))
+        k: (
+            np.concatenate(v)
+            if v
+            else np.zeros((0, nl))
+            if k in ("path", "mom", "mmv", "nmv")
+            else np.zeros(0)
+        )
         for k, v in out.items()
     }
     proto = Protocol(
@@ -401,6 +445,8 @@ def simulate(
         mua.copy(),
         None,
         cat["mom"].reshape(-1, nl),
+        cat["mmv"].reshape(-1, nl) if tagging else None,
+        cat["nmv"].reshape(-1, nl).astype(np.int64) if tagging else None,
     )
     scatter_events = None
     if record_scattering is True:

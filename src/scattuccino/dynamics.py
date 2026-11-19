@@ -84,3 +84,70 @@ def speckle_contrast_single_exponential(tau_c: float, exposure: float, beta: flo
     """K for g1 = exp(−τ/τ_c): K² = β[τ_c/T + (τ_c²/2T²)(e^(−2T/τ_c) − 1)] (Bandyopadhyay 2005)."""
     x = exposure / tau_c
     return float(np.sqrt(beta * (1 / x + (np.exp(-2 * x) - 1) / (2 * x * x))))
+
+
+# S8b: laser Doppler with tagged moving scatterers (`Layer.moving_fraction`). A path with momentum
+# transfer Y_t over its moving events in layer t contributes exp(−Σ_t (1/3) k_t² Y_t ⟨Δr_t²(τ)⟩)
+# exactly (Gaussian displacements); paths without moving events keep their phase (unshifted
+# light), so g1 → the unshifted fraction for τ → ∞ (bonner1981 Eqs. 21–23).
+
+
+def g1_tagged(
+    p: Protocol,
+    motions: tuple[Motion, ...],
+    wavelength_um: float,
+    tau: FloatArray,
+    rho_lo: float,
+    rho_hi: float,
+    side: int = -1,
+) -> FloatArray:
+    """Normalised field autocorrelation from the tagged moving events (`Motion.alpha` is not
+    used: the fraction is in the transport)."""
+    if p.momentum_moving is None:
+        raise ValueError("the protocol carries no tagged moving events (Layer.moving_fraction)")
+    sel = (p.side == side) & (p.rho >= rho_lo) & (p.rho < rho_hi)
+    w = p.weight[sel]
+    y = p.momentum_moving[sel]
+    k2 = (2 * np.pi * p.n_layer / (wavelength_um * 1e-3)) ** 2
+    tau = np.atleast_1d(np.asarray(tau, dtype=np.float64))
+    out = np.empty(tau.size)
+    for i, t in enumerate(tau):
+        expo = np.zeros(w.size)
+        for layer, m in enumerate(motions):
+            expo += k2[layer] / 3 * y[:, layer] * float(m.msd(np.array([t]))[0])
+        out[i] = np.sum(w * np.exp(-expo)) / np.sum(w)
+    return out
+
+
+def unshifted_fraction(p: Protocol, rho_lo: float, rho_hi: float, side: int = -1) -> float:
+    """Weight fraction of the detected light without any moving event (limit of g1 for τ → ∞)."""
+    if p.n_moving is None:
+        raise ValueError("the protocol carries no tagged moving events (Layer.moving_fraction)")
+    sel = (p.side == side) & (p.rho >= rho_lo) & (p.rho < rho_hi)
+    w = p.weight[sel]
+    return float(np.sum(w[p.n_moving[sel].sum(axis=1) == 0]) / np.sum(w))
+
+
+def doppler_spectrum(tau: FloatArray, g: FloatArray, omega: FloatArray) -> FloatArray:
+    """S(ω) = (1/π) ∫₀^∞ cos(ωτ) G(τ) dτ for the fluctuating part G of the intensity correlation,
+    e.g. G = g2 − 1 − β f₀² with the unshifted fraction f₀ (bonner1981 Eq. 26); two-sided,
+    ∫ S dω = G(0). Trapezoidal rule on `tau` (starting at 0, G negligible at its end)."""
+    tau = np.asarray(tau, dtype=np.float64)
+    g = np.asarray(g, dtype=np.float64)
+    omega = np.atleast_1d(np.asarray(omega, dtype=np.float64))
+    out = np.empty(omega.size)
+    for i0 in range(0, omega.size, 256):
+        c = np.cos(omega[i0 : i0 + 256, None] * tau[None, :])
+        out[i0 : i0 + 256] = np.trapezoid(c * g[None, :], tau, axis=1) / np.pi
+    return out
+
+
+def mean_frequency(tau: FloatArray, g: FloatArray) -> float:
+    """First moment ⟨ω⟩ = ∫ |ω| S(ω) dω (rad/s, bonner1981 Eq. 32) directly from G:
+    ⟨ω⟩ = (2/π) ∫₀^∞ (G(0) − G(τ))/τ² dτ (G even and smooth at 0; the part beyond the grid as
+    G(0)/τ_max with G → 0)."""
+    tau = np.asarray(tau, dtype=np.float64)
+    g = np.asarray(g, dtype=np.float64)
+    t, d = tau[1:], g[0] - g[1:]
+    head = float(d[0] / t[0] ** 2 * t[0])  # (G(0) − G)/τ² is finite at 0: −G''(0)/2
+    return float(2 / np.pi * (head + np.trapezoid(d / t**2, t) + g[0] / tau[-1]))

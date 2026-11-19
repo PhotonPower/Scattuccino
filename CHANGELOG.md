@@ -77,6 +77,10 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   BWPM K17/E9; Test T16c, g-Vergleich mit der BWPM als bekannte Abweichung (`xfail`). D9 ergänzt:
   Monte Carlo im Hybrid mit vektoriellem Born, gemessene Werte als Diagnose, solange BWPM #37 offen
   ist.
+- S8b: Laser-Doppler mit gekennzeichneten bewegten Streuern (`Layer.moving_fraction`,
+  `Layer.phase_moving`, `Protocol.momentum_moving`, `Protocol.n_moving`), `dynamics.g1_tagged`,
+  `unshifted_fraction`, `doppler_spectrum`, `mean_frequency`; Referenz nach Bonner und Nossal
+  (`reference.bonner_*`); Test T9b.
 - S9b-8: δn in BWPM wahlweise als vektorielles Born-Inkrement (`microstructure.bwpm_medium`,
   `model="increment"` in `calibrate_with_bwpm`, `hybrid_oct`, `tools/calibrate_bwpm.py`; BWPM B7);
   Standard bleibt `"steps"`, weil das Inkrement bei σ_n ≈ 0,06 Leistung in Wellen nahe dem
