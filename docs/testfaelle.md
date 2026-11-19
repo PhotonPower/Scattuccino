@@ -27,7 +27,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T8 | Fluoreszenz und Raman: ohne Streuung gegen geschlossene Lösung; Energie der Emission; vorwärts gegen adjungiert (Fluchtfunktion); räumlich versetzte Detektion (SORS) | E₂-Integral; exakt; unabhängige Läufe; Verhalten | S7a | ✅ |
 | T9 | Dynamik: Impulsübertrag (⟨1 − cos θ⟩ = 1 − g), DCS gegen Korrelationsdiffusion, Speckle-Kontrast gegen geschlossene Form, Tiefenempfindlichkeit in zwei Schichten | exakt; Boas & Yodh; Bandyopadhyay | S8a | ✅ |
 | T10a | OCT (Intensitätsmodell): Einfach-Rückstreuung gegen exaktes Integral; Kohärenz-Gating erhält das Signal; Anteil der Mehrfachstreuung und Beer-Gesetz des OCT | exakt; Integral; Verhalten | S9a | ✅ |
-| T10b | OCT mit Fokus (Fieldtracing), Übergang BWPM, erweitertes Huygens-Fresnel | Thrane, Schmitt; Querprobe BWPM | S9b/c | ○ |
+| T10b | OCT mit Fokus (Fieldtracing), Übergang BWPM, erweitertes Huygens-Fresnel; S9c-1: geschlossene Form gegen Quadratur von Gl. 21 und A1, Grenzfälle, thrane2000 Abb. 2 und 3 | Thrane, Schmitt; Querprobe BWPM | S9b/c | ◐ (S9c-1 ✅) |
 | T17a | Hybrid-OCT, Kette: Fokus des Gauß-Strahls, Modenkopplung eines Strahls, Leistung an der Übergabe | analytisch | S9b-3a | ✅ |
 | T17b | Next-Event-Schätzer der Modenkopplung: gleich dem direkten Schätzer (Mehrmoden-Akzeptanz), Ereignisse stapelweise = gespeichert, Kopplung eines Punktstreuers ∝ Modenintensität | direkter Schätzer; exakt | S9b-4 | ✅ |
 | T16b | Gemessene Streuparameter aus der BWPM für den Monte Carlo: μs aus der Extinktion; Phasenfunktion vorwärts gemessen, rückwärts und unter der Winkelauflösung des Gitters Born (absolut) – normiert, Rückwärtsteil = Born auf 5 % | exakt / Born | S9b-5 | ✅ |
@@ -456,3 +456,23 @@ r/cos²θ zu groß).
   10 µm mit 4 Seeds ergibt 0,93 ± 0,10 / 1,06 ± 0,24 / 0,85 ± 0,10 für σ = 0,25 / 0,4 / 0,8 µm
   (z_h = 0 selbst ±9 %). Keine σ-Abhängigkeit nachweisbar; ob neben der Husimi-Glättung ein
   zweiter Effekt bleibt, entscheidet erst die Abnahme mit 10⁷ Paketen (T17).
+
+## T10b: Erweitertes Huygens-Fresnel, geschlossene Form (S9c-1)
+
+`scattuccino.ehf` nach thrane2000 (Entwurf `docs/entwurf-s9c-ehf.md`, D11 A); Test
+`tests/test_s9c1_ehf.py`.
+
+- Ψ(z) in geschlossener Form gegen die Quadratur von thrane2000 Gl. 21 auf 10⁻⁸ (Fokus auf der
+  Grenzfläche, w_H²/w_S² zwischen 0,05 und 0,95, damit alle drei Terme zählen). Die Integration
+  gibt beim Kreuzterm den Faktor 4 wie levitz2004 Gl. 2; thrane2000 Gl. 22 druckt 2 (#36, Label
+  `paper`).
+- ρ₀ gegen die Quadratur von Gl. A1 (B(s) = s/n im Gewebe, ohne Streuung bis zur Linse) auf 10⁻¹⁰.
+- Grenzfälle, diffus und spiegelnd: μs → 0 gibt Ψ → 1; ohne seitliche Kohärenz (θ_rms → ∞)
+  Ψ → e^(−2μs z) (je 10⁻⁶).
+- thrane2000 Abb. 2 (μs = 20/mm, Fokus auf der Grenzfläche; diffus mit und ohne
+  Shower-Curtain-Effekt, spiegelnd) und Abb. 3 (z = 0,5 mm, μs = 2–7,5/mm, Glasplatte nach Gl. 27):
+  log₁₀ Ψ aus den Abbildungen digitalisiert (300 dpi, Rahmen als Achsen). Die Rechnung liegt
+  durchweg 0,08–0,15 Dekaden darüber; die Abweichung ist bei allen Kurven gleich gerichtet und
+  kommt vom Ablesen der Achsen. Toleranz 0,25 Dekaden.
+- Bei den Parametern der Abbildungen ist w_H²/w_S² ≪ 1; ob dort mit 2 oder 4 gerechnet wurde, ist
+  nicht zu unterscheiden.
