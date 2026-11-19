@@ -58,3 +58,7 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - S9b-5: Monte Carlo im Hybrid mit den in der BWPM gemessenen Streuparametern
   (`Calibration.scattering()`, `hybrid_oct(scattering=…)`); Raumwinkel-Jacobi in der g-Auswertung;
   Abnahmeauftrag mit Kalibrierschritt.
+- S9b-7: vektorielle Born-Referenz `microstructure.born(vector=True)` (Standard, Dipolfaktor
+  (1 + cos²θ)/2; `vector=False` skalar wie bisher) und Leistung der gestreuten ebenen Wellen mit E_z
+  (`microstructure.plane_wave_power`) in `calibrate_with_bwpm` und `tools/calibrate_bwpm.py`, nach
+  BWPM K17/E9; Test T16c, g-Vergleich mit der BWPM als bekannte Abweichung (`xfail`).

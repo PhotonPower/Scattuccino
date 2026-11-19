@@ -33,6 +33,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T16b | Gemessene Streuparameter aus der BWPM für den Monte Carlo: μs aus der Extinktion; Phasenfunktion vorwärts gemessen, rückwärts und unter der Winkelauflösung des Gitters Born (absolut) – normiert, Rückwärtsteil = Born auf 5 % | exakt / Born | S9b-5 | ✅ |
 | T17 | Hybrid-OCT: Unabhängigkeit von z_h (Server, `docs/agent-server-s9b4.md`), gegen erweitertes Huygens-Fresnel | S9b-4, S9c | ○ |
 | T16 | Zufallsmedium (Whittle-Matérn): Born gegen geschlossene Form, Feldstatistik, eine BWPM-Realisierung reproduziert Born-μs und g | exakt; Statistik; Born | S9b-2 | ✅ (Kalibrierläufe auf dem Server offen) |
+| T16c | Vektorielle Born-Näherung (Dipolfaktor) gegen geschlossene Form; Leistung ebener Wellen mit E_z; BWPM-Realisierung: μs gegen vektorielles Born, g vorwärts als bekannte Abweichung (BWPM E9, `xfail`) | exakt; vektorielles Born | S9b-7 | ◐ (g: Grenze der FPWPM) |
 | T11 | Jacobi-Matrizen | finite Differenzen | S10 | ○ |
 | T12 | Phantome | Mikrosphären (Mie exakt), Lipidemulsionen (Literatur) | S11 | ○ |
 
@@ -398,3 +399,33 @@ Rückwärtshälfte nur in der Form von Born übernahm und bei 90° an die Messun
 die Rückstreuung um vier Größenordnungen (die Vorwärtsausbreitung sieht bei 90° fast nichts) – das
 OCT-Signal fiel entsprechend. Mit dem jetzigen Ansatz liegt das Hybrid-Signal (z_h = 2,5 µm) mit
 gemessenen Parametern in derselben Größe wie mit Born (lokal, 5·10⁴ Pakete).
+
+## T16c: Vektorielle Born-Referenz und Leistung mit E_z (S9b-7)
+
+Anlass: BWPM K17 und Hinweise zu S9b-2 (BWPM #29, `docs/hinweise-scattuccino-s9b2.md`). Die
+Referenz war skalar, die Messgröße ließ E_z weg; beides zusammen verdeckte teilweise die Grenze der
+FPWPM bei großen Winkeln (BWPM E9: s-Anteil um r = cos θ (3 − cos θ)/2 zu klein, p-Anteil um
+r/cos²θ zu groß).
+
+- `microstructure.born(vector=True)` (Standard): σ(θ)·(1 + cos²θ)/2, gegen die geschlossene Form
+  der exponentiellen Korrelation (Quadratur) auf 10⁻⁶; rückwärts und vorwärts unverändert, 90°
+  halbiert. `vector=False` ist die bisherige skalare Rechnung (T16 unverändert).
+- `microstructure.plane_wave_power`: |F{E_x}|² + |F{E_y}|² + |k⊥·F{E⊥}|²/k_z², ebene Welle bei 40°
+  p-polarisiert 1/cos²θ, s-polarisiert 1 (10⁻⁹). Verwendet in `calibrate_with_bwpm` und
+  `tools/calibrate_bwpm.py`.
+- BWPM-Realisierung (96² × 60, l_c = 0,5 µm, D = 4, Seed 1; Python-Fallback):
+
+  | | skalar, nur E⊥ (bisher) | vektoriell, mit E_z |
+  | --- | --- | --- |
+  | μs gefittet / μs Born | 0,960 | 1,010 |
+  | g vorwärts gemessen / Born | 0,934 / 0,946 | 0,913 / 0,955 |
+
+  μs trifft jetzt die vektorielle Born-Näherung (Test: 10 %). g weicht um −0,042 ab: die FPWPM
+  streut mit vollem Feld bei großen Winkeln zu viel. Die K17-Vorhersage für Einfachstreuung gibt
+  durch E_z eine Verschiebung von −0,014 (gemessen −0,021), absolut liegen die Messungen etwa 0,03
+  darunter (Mehrfachstreuung bei μs z = 0,4, nicht geprüft). Der g-Vergleich ist als
+  `xfail(strict)` mit Verweis auf BWPM E9 markiert (Freigabe des Maintainers 2026-11-19); wird die
+  FPWPM korrigiert (BWPM #37), schlägt er an.
+- Folge für den Hybrid: Born als Standard im Monte Carlo ist jetzt vektoriell (μs −4,9 %, g 0,935 →
+  0,948 für das Medium aus #29); die Rückwärtshälfte der gemessenen Phasenfunktion (T16b) ebenfalls,
+  bei 180° unverändert.

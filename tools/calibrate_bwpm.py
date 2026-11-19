@@ -92,7 +92,8 @@ def angular_distribution(
 
     Far field amplitude ∝ cos θ · F(k⊥), so the power per solid angle is |F|² cos²θ and a cell
     of the k⊥ grid covers dΩ = dk⊥²/(k² cos θ). The library's g weights the cells with
-    |F|² cos²θ (no Jacobian); the second value uses the cell weight |F|² cos²θ · dΩ.
+    |F|² cos²θ (no Jacobian); the second value uses the cell weight |F|² cos²θ · dΩ. |F|²
+    includes E_z = −k⊥·E⊥/k_z (`microstructure.plane_wave_power`, S9b-7).
     """
     ny, nx, _ = f.shape
     k = 2 * np.pi * n0 / (WAVELENGTH_UM * 1e-3)
@@ -102,9 +103,7 @@ def angular_distribution(
     kp2 = kxx**2 + kyy**2
     prop = kp2 < k**2
     ct = np.sqrt(np.clip(1 - kp2 / k**2, 1e-12, 1))
-    s = np.zeros((ny, nx))
-    for comp in range(2):
-        s += np.abs(np.fft.fft2(f[:, :, comp] - np.mean(f[:, :, comp]))) ** 2
+    s = ms.plane_wave_power(f, kxx, kyy, k)
     w = s * ct**2 * prop
     g_lib = float(np.sum(w * ct) / np.sum(w))
     dk = (kx[1] - kx[0]) * (ky[1] - ky[0])
