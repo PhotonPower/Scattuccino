@@ -20,7 +20,12 @@ from scattuccino.phase import HenyeyGreenstein, PhaseFunction
 class Layer:
     """Homogeneous layer: thickness d (mm, may be np.inf for the last layer), μa, μs (1/mm),
     Henyey-Greenstein anisotropy g, refractive index n and optionally another phase function
-    (`scattuccino.phase`; S3, used by `scattuccino.transport` and `adding_doubling`)."""
+    (`scattuccino.phase`; S3, used by `scattuccino.transport` and `adding_doubling`).
+
+    S8b (laser Doppler): a fraction `moving_fraction` of the scattering events is due to moving
+    scatterers with their own phase function `phase_moving` (default: the layer's); the transport
+    tags these events (`Protocol.n_moving`, `Protocol.momentum_moving`). μs is the total
+    scattering coefficient; `adding_doubling` ignores the tagging (static phase function only)."""
 
     d: float
     mua: float
@@ -28,6 +33,8 @@ class Layer:
     g: float = 0.0
     n: float = 1.0
     phase: PhaseFunction | None = None
+    moving_fraction: float = 0.0
+    phase_moving: PhaseFunction | None = None
 
     @property
     def phase_function(self) -> PhaseFunction:

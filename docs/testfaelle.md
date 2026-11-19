@@ -26,6 +26,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T7d | Benchmarks von Ramella-Roman, Prahl, Jacques (2005) | Literatur (Volltext nötig) | S6 | ○ |
 | T8 | Fluoreszenz und Raman: ohne Streuung gegen geschlossene Lösung; Energie der Emission; vorwärts gegen adjungiert (Fluchtfunktion); räumlich versetzte Detektion (SORS) | E₂-Integral; exakt; unabhängige Läufe; Verhalten | S7a | ✅ |
 | T9 | Dynamik: Impulsübertrag (⟨1 − cos θ⟩ = 1 − g), DCS gegen Korrelationsdiffusion, Speckle-Kontrast gegen geschlossene Form, Tiefenempfindlichkeit in zwei Schichten | exakt; Boas & Yodh; Bandyopadhyay | S8a | ✅ |
+| T9b | Laser-Doppler: gekennzeichnete bewegte Streuer, g1 mit unverschobenem Anteil gegen Gl. 22 (P_m aus dem Protokoll, I₁ aus Gl. 2), Referenz bonner1981 gegen eigene Quadraturen, Spektrum und erster Moment | bonner1981 | S8b | ✅ |
 | T10a | OCT (Intensitätsmodell): Einfach-Rückstreuung gegen exaktes Integral; Kohärenz-Gating erhält das Signal; Anteil der Mehrfachstreuung und Beer-Gesetz des OCT | exakt; Integral; Verhalten | S9a | ✅ |
 | T10b | OCT mit Fokus (Fieldtracing), Übergang BWPM, erweitertes Huygens-Fresnel; S9c-1: geschlossene Form gegen Quadratur von Gl. 21 und A1, Grenzfälle, thrane2000 Abb. 2 und 3; S9c-2: allgemeines EHF mit Gaußscher MTF = geschlossene Form | Thrane, Lutomirski–Yura; Querprobe BWPM | S9b/c | ◐ (S9c-1, S9c-2 ✅) |
 | T17a | Hybrid-OCT, Kette: Fokus des Gauß-Strahls, Modenkopplung eines Strahls, Leistung an der Übergabe | analytisch | S9b-3a | ✅ |
@@ -321,6 +322,31 @@ Protokoll mit Impulsübertrag je Schicht Y_t = Σ(1 − cos θ) (`Protocol.momen
   K = 0,42427 auf 10⁻⁸.
 - **Zwei Schichten**, Bewegung nur unter 1 mm: g1(0,3 ms) bei 3–4 mm deutlich kleiner als bei
   0,5–1 mm – die Tiefenempfindlichkeit von DCS.
+
+## T9b: Laser-Doppler mit gekennzeichneten bewegten Streuern (S8b)
+
+`Layer.moving_fraction`, `Layer.phase_moving`; das Protokoll führt `momentum_moving` und
+`n_moving` je Schicht. `dynamics.g1_tagged`, `unshifted_fraction`, `doppler_spectrum` (bonner1981
+Gl. 26), `mean_frequency` (Gl. 32); Referenz `reference.bonner_*`. Test `tests/test_s8b_doppler.py`.
+
+- **Referenz gegen ihre Definitionen:** I₁ nach Gl. 18 gegen die Quadratur von Gl. 2 (mit Gl. 12′,
+  13′) auf 10⁻⁸, Gl. 20 als Grenzfall; S_j nach Gl. 31 gegen die Kosinus-Quadratur von Gl. 30 auf
+  10⁻⁸ – **Gl. 31 druckt S₁ = e^(−W), Gl. 30 gibt ½ e^(−W)** (passend zu S₂, S₃ und Gl. A3;
+  Issue mit Label `paper`); ⟨ω⟩ nach Gl. 36/A4 gegen den numerisch berechneten ersten Moment des
+  Spektrums von Gl. 24 auf 2·10⁻³ (m̄ = 0,2 / 1 / 3), auch direkt aus G(τ).
+- **Monte Carlo** (Halbraum μs = 10/mm, HG 0,8, μa = 0,01/mm, n = 1,4, λ = 785 nm; 2 % der Stöße an
+  bewegten Zellen mit dem Strukturfaktor von Gl. 13′, a = 2,75 µm; Gaußsche Geschwindigkeiten,
+  v = 1 mm/s; 4·10⁴ Pakete, Abstand 1–3 mm): Anteil der Stöße 0,02 und ⟨1 − cos θ⟩ der bewegten
+  Stöße wie die Phasenfunktion der Zellen. g1 gegen Gl. 22 mit P_m aus dem Protokoll und I₁ aus
+  Gl. 2 (Quadratur über die Phasenfunktion, unabhängig vom Transport) auf 10⁻³ (0,9902 / 0,8239 /
+  0,3680 / 0,2916 gegen 0,9903 / 0,8246 / 0,3684 / 0,2910 bei τ = 0,2 / 1 / 5 / 20 ms).
+- **Befund Poisson-Annahme (bonner1981 Gl. 23):** Die Zahl der Stöße mit bewegten Zellen ist für
+  die detektierten Photonen nicht Poisson-verteilt (m̄ = 2,24, P₀ = 0,285 statt e^(−m̄) = 0,107),
+  weil die Weglängen breit verteilt sind. g1 nach Gl. 23 liegt bei großen τ um den Faktor 2–2,6
+  darunter (0,194 statt 0,368 bei 5 ms). Gl. 22 mit dem gemessenen P_m ist die Referenz.
+- Ohne bewegte Streuer zieht der Transport keine zusätzlichen Zufallszahlen; die bisherigen Läufe
+  bleiben bitgleich (Tests S1–S9 unverändert grün). `Motion.alpha` (S8a, mittlerer Faktor) bleibt
+  für DCS; es kennt keinen unverschobenen Anteil.
 
 ## T10a: OCT-A-Scans aus dem Protokoll (S9a)
 
