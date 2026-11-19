@@ -22,4 +22,5 @@ prüfen).
 | reynolds1980 | L. O. Reynolds, N. J. McCormick, „Approximate two-parameter phase function for light scattering“, J. Opt. Soc. Am. 70 (1980) | Z | S3: Gegenbauer-Phasenfunktion |
 | mackintosh1989 | F. C. MacKintosh, J. X. Zhu, D. J. Pine, D. A. Weitz, „Polarization memory of multiply scattered light“, Phys. Rev. B 40 (1989) | Z | S6: Polarisationsgedächtnis |
 | bandyopadhyay2005 | R. Bandyopadhyay et al., „Speckle-visibility spectroscopy: A tool to study time-varying dynamics“, Rev. Sci. Instrum. 76 (2005) | Z | S8: Speckle-Kontrast |
+| bastiaans1978 | M. J. Bastiaans, „The Wigner distribution function applied to optical signals and systems“, Opt. Commun. 25 (1978) 26–30 | Z | S9b-6: Wigner-Funktion des Gaußstrahls, freie Ausbreitung als Scherung |
 | yao1999 | G. Yao, L. V. Wang, „Monte Carlo simulation of an optical coherence tomography signal in homogeneous turbid media“, Phys. Med. Biol. 44 (1999) | Z | S9: Monte-Carlo-OCT |
