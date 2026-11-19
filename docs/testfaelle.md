@@ -31,6 +31,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T9b | Laser-Doppler: gekennzeichnete bewegte Streuer, g1 mit unverschobenem Anteil gegen Gl. 22 (P_m aus dem Protokoll, I₁ aus Gl. 2), Referenz bonner1981 gegen eigene Quadraturen, Spektrum und erster Moment | bonner1981 | S8b | ✅ |
 | T10a | OCT (Intensitätsmodell): Einfach-Rückstreuung gegen exaktes Integral; Kohärenz-Gating erhält das Signal; Anteil der Mehrfachstreuung und Beer-Gesetz des OCT | exakt; Integral; Verhalten | S9a | ✅ |
 | T10b | OCT mit Fokus (Fieldtracing), Übergang BWPM, erweitertes Huygens-Fresnel; S9c-1: geschlossene Form gegen Quadratur von Gl. 21 und A1, Grenzfälle, thrane2000 Abb. 2 und 3; S9c-2: allgemeines EHF mit Gaußscher MTF = geschlossene Form | Thrane, Lutomirski–Yura; Querprobe BWPM | S9b/c | ◐ (S9c-1, S9c-2 ✅) |
+| T10c | Rückstreuung der BWPM (B8) an δn: Born erster Ordnung derselben Realisierung (homogene Schicht gegen Airy), Leistung im Born-Bereich, Feldfehler linear in σ_n | exakt (Airy); Born erster Ordnung | S9c-4a | ✅ |
 | T17a | Hybrid-OCT, Kette: Fokus des Gauß-Strahls, Modenkopplung eines Strahls, Leistung an der Übergabe | analytisch | S9b-3a | ✅ |
 | T17b | Next-Event-Schätzer der Modenkopplung: gleich dem direkten Schätzer (Mehrmoden-Akzeptanz), Ereignisse stapelweise = gespeichert, Kopplung eines Punktstreuers ∝ Modenintensität | direkter Schätzer; exakt | S9b-4 | ✅ |
 | T16b | Gemessene Streuparameter aus der BWPM für den Monte Carlo: μs aus der Extinktion; Phasenfunktion vorwärts gemessen, rückwärts und unter der Winkelauflösung des Gitters Born (absolut) – normiert, Rückwärtsteil = Born auf 5 % | exakt / Born | S9b-5 | ✅ |
@@ -602,3 +603,33 @@ statt als Brechzahlstufen; `microstructure.bwpm_medium(model=…)`, Option `mode
   `xfail(strict)` mit Verweis auf BWPM #29; der g-Test mit Stufen bleibt `xfail` (E9). Ist das
   Inkrement stabil, wird der Standard umgestellt und der g-`xfail` entfernt (Freigabe des
   Maintainers 2026-11-19).
+
+## T10c: Rückstreuung der BWPM an δn gegen Born erster Ordnung (S9c-4a)
+
+BWPM B8 (BWPM #29, #54): Rückstreuung an `fluctuation=δn`. `microstructure.born_reflection`:
+Born erster Ordnung der Reflexion einer Schicht mit je Scheibe konstantem δn (Weyl-Entwicklung der
+dyadischen Green-Funktion, bornwolf1999), dieselbe Realisierung wie in der BWPM. Test
+`tests/test_s9c4_backscatter.py`.
+
+- `born_reflection` gegen die exakte Reflexion einer homogenen Schicht (Airy, δ = 10⁻⁴, 1–30
+  Scheiben): Abweichung ≤ 3δk₀d relativ zur Skala δ/n₀ – Born behält die Phase k₀n₀ des Wirts.
+- BWPM (64², 40 Scheiben à 0,1 µm, l_c = 0,5 µm, iterations = 1, |cos θ| > 0,28), Seeds 1–3:
+
+  | σ_n | Leistung BWPM/Born | Feldfehler |
+  | --- | --- | --- |
+  | 0,0018 | 0,995–1,006 | 0,031–0,039 |
+  | 0,0036 | 0,996–1,019 | 0,062–0,079 |
+  | 0,0143 | 1,009–1,105 | 0,243–0,311 |
+
+  Der Feldfehler ist linear in σ_n (Verhältnis 1,99–2,01 bei 2×, 3,92–3,94 bei 4×): die
+  Phasenmodulation durch Vorwärtsstreuung auf Hin- und Rückweg, die Born erster Ordnung nicht
+  enthält. Die Leistung folgt im Born-Bereich auf 2 %. **Die Rückstreuung der BWPM ist damit für
+  die Realisierung bestätigt.**
+- Auswertung: Zellen nahe dem Grenzwinkel ausgenommen; dort hat das Born-Feld den Faktor 1/k_z,
+  und im periodischen Kasten liegt zufällig ein Mode fast auf k⊥ = k (einzelne Zellen dominieren).
+- **Offen (S9c-4b):** Ensemble gegen die kontinuierliche Born-Phasenfunktion und gegen den Monte
+  Carlo. Erste Läufe (6,4 µm Kasten, 2–6 Realisierungen) geben 0,93 / 1,10 / 1,33 für h = 0,1 /
+  0,05 / 0,025 µm – das Spektrum des Gitterfeldes bei q_z = 2k hängt von h ab (Abtastung, je Scheibe
+  konstant), und die Statistik je Winkel ist zu klein. Dafür braucht es feine Gitter und viele
+  Realisierungen (Server). Die Leistung nach Rückstreuung wird mit `plane_wave_power(Feld)`
+  ausgewertet (die Funktion transformiert selbst).
