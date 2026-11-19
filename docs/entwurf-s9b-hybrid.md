@@ -56,6 +56,14 @@ diffuses Zufallsfeld: Richtungsverteilung lambertsch.
   unten wieder durch z_h nach oben läuft, durchquert den oberen Bereich als Monte Carlo mit den
   statistischen Größen (keine Rückkopplung ins Feld; die Mikrostruktur oben wirkt auf dem Rückweg
   nur statistisch).
+- **Ergänzung 2026-11-19 (BWPM K17/E9, BWPM #39):** Die FPWPM propagiert die Komponenten skalar
+  und erhält die Quernorm statt des Energieflusses. Ihre Extinktion ist ∫ σ r²/cos θ dΩ
+  (1,028 × vektorielles Born für das Medium aus #29), ihre Phasenfunktion streut den p-Anteil bei
+  großen Winkeln zu stark (g 0,913 statt 0,955). Solange BWPM #37 offen ist, rechnet der Monte
+  Carlo deshalb mit dem **vektoriellen Born** (`hybrid_oct(scattering=None)`, Standard); die in der
+  BWPM gemessenen Werte (`Calibration.scattering()`) bleiben als Diagnose. Oben und unten streuen
+  damit um wenige Prozent verschieden; eine Abhängigkeit von z_h in dieser Größe liegt innerhalb
+  des Abnahmekriteriums.
 
 ## D10: Detektion des zurückkommenden Lichts
 

@@ -139,8 +139,9 @@ def hybrid_oct(
     scattering: tuple[float, PhaseFunction] | None = None,
 ) -> HybridResult:
     """scattering: (μs, phase function) for the Monte Carlo below and on the way back above the
-    hand-off; default Born. Use `Calibration.scattering()` from `calibrate_with_bwpm` on the same
-    grid so that both regions describe the same medium (D9, S9b-2 finding)."""
+    hand-off; default vector Born (D9 amended 2026-11-19: the FPWPM extinction and phase function
+    deviate by a few percent, BWPM K17/E9). `Calibration.scattering()` from `calibrate_with_bwpm`
+    on the same grid gives the values measured in the BWPM, as a diagnostic."""
     from rtt_fusion.phasespace import field_to_packets
     from rtt_fusion.ports import GriddedField, Port, power
 

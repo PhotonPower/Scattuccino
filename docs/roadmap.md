@@ -58,6 +58,6 @@ OCT-Sonde, die in ein Gewebephantom abbildet (Druckmodell → Sonde → Gewebe �
 | D5 | Diffusion, Akustik, Wärme | hp-FEM um skalare H1-Probleme erweitern (Vorschlag dort) statt eigener FEM |
 | D7 | FP32 im GPU-Kern | freigegeben 2026-11-07: FP64 Standard und Referenz, FP32 als `precision="single"`, Abnahme statistisch |
 | D8 | Feld → Pakete bei S9b | freigegeben: Husimi-Phasenraum (Befund: Übergabe an/hinter den Fokus) |
-| D9 | Übergabetiefe, Konsistenz oben/unten | freigegeben: z_h ≈ 1–2/μs, Zufallsmedium in BWPM auf μs, g kalibriert |
+| D9 | Übergabetiefe, Konsistenz oben/unten | freigegeben: z_h ≈ 1–2/μs, Zufallsmedium in BWPM auf μs, g kalibriert; ergänzt 2026-11-19: Monte Carlo mit vektoriellem Born, solange BWPM #37 offen ist |
 | D10 | Detektion in S9b | freigegeben: Modenanpassung im Phasenraum (ballistisches Licht über das Feld) |
 | D6 | Phantome und Messdaten | Validierung zunächst an Literatur; eigene Phantommessungen, sobald vorhanden |
