@@ -6,9 +6,12 @@ Decisions D8–D10 (`docs/entwurf-s9b-hybrid.md`):
    BWPM volume holding one realisation of the microstructure (`microstructure.random_field`)
    from z = 0 to the hand-off depth z_h (forward FPWPM; the reflection of this region is not part
    of the depth-resolved signal below z_h).
-2. The field at z_h becomes photon packets through its Husimi distribution
-   (`rtt_fusion.phasespace.field_to_packets`); z_h = 0 is the pure Monte-Carlo limit (packets from
-   the incident field at the surface).
+2. The field at z_h becomes photon packets (S9b-6): its projection c·E_G onto the incident beam
+   propagated freely to z_h (`split_coherent`) is coherent light – packets from the exact Wigner
+   function of the Gaussian beam (`gaussian_beam_packets`), no smoothing; the orthogonal rest
+   (scattered light) through its Husimi distribution (`rtt_fusion.phasespace.field_to_packets`).
+   The power splits exactly, |E_h|² = |c|²|E_G|² + |δE|². z_h = 0 is the pure Monte-Carlo limit
+   (c = 1: all packets from the Wigner function of the incident beam).
 3. Below z_h – and on the way back up through 0 < z < z_h – the packets are transported by Monte
    Carlo with the statistical parameters of the same tissue (μs, phase function from Born).
 4. Packets leaving through the top couple into the detection mode (the same focused beam,
@@ -50,6 +53,57 @@ def gaussian_beam_field(
     e = np.zeros((nx, nx, 2), dtype=np.complex128)
     e[:, :, 0] = (-1j * z_r / q0) * np.exp(1j * k * (xx**2 + yy**2) / (2 * q0))
     return e
+
+
+def free_field(
+    e: np.ndarray,  # type: ignore[type-arg]
+    n0: float,
+    wavelength_um: float,
+    dx: float,
+    dz: float,
+) -> np.ndarray:  # type: ignore[type-arg]
+    """(ny, nx, 2) field propagated by dz (mm, ≥ 0) through the homogeneous medium n₀: angular
+    spectrum on the periodic grid, e^(i k_z dz) with k_z = sqrt(k² − k⊥²) for e^(i(kz − ωt))
+    (evanescent waves decay)."""
+    ny, nx = e.shape[:2]
+    k = 2 * np.pi * n0 / (wavelength_um * 1e-3)
+    kx, ky = np.meshgrid(2 * np.pi * np.fft.fftfreq(nx, dx), 2 * np.pi * np.fft.fftfreq(ny, dx))
+    prop = np.exp(1j * np.sqrt(k**2 - kx**2 - ky**2 + 0j) * dz)
+    return np.asarray(np.fft.ifft2(np.fft.fft2(e, axes=(0, 1)) * prop[:, :, None], axes=(0, 1)))
+
+
+def split_coherent(
+    e: np.ndarray,  # type: ignore[type-arg]
+    e_g: np.ndarray,  # type: ignore[type-arg]
+) -> tuple[complex, np.ndarray]:  # type: ignore[type-arg]
+    """Projection of the field e onto the beam e_g (same grid): c = ⟨e_g, e⟩/⟨e_g, e_g⟩ and the
+    orthogonal rest e − c e_g, so that Σ|e|² = |c|² Σ|e_g|² + Σ|rest|² exactly (no cross term).
+    For a plane wave this is the coherent field of `calibrate_with_bwpm` (mean of the field)."""
+    c = complex(np.vdot(e_g, e) / np.vdot(e_g, e_g))
+    return c, np.asarray(e - c * e_g)
+
+
+def gaussian_beam_packets(
+    beam: Beam,
+    n0: float,
+    wavelength_um: float,
+    z_p: float,
+    n: int,
+    rng: np.random.Generator,
+) -> tuple[FloatArray, FloatArray, FloatArray]:
+    """n packets (x, y in mm, unit directions (n, 3), u_z > 0) at depth z_p from the Wigner function
+    of the paraxial Gaussian beam: at the waist r ~ N(0, w_f²/4), k⊥ ~ N(0, 1/w_f²) per axis,
+    independent (positive, minimum uncertainty – no Husimi smoothing); then straight rays to z_p,
+    r_p = r_f + (z_p − z_f) u⊥/u_z (exact for the free paraxial propagation of the Wigner
+    function; the same geometry as `mode_coupled_signal`)."""
+    k = 2 * np.pi * n0 / (wavelength_um * 1e-3)
+    xf = rng.normal(0.0, beam.w_f / 2, n)
+    yf = rng.normal(0.0, beam.w_f / 2, n)
+    ux = rng.normal(0.0, 1 / beam.w_f, n) / k
+    uy = rng.normal(0.0, 1 / beam.w_f, n) / k
+    uz = np.sqrt(np.clip(1 - ux**2 - uy**2, 0.0, None))
+    t = (z_p - beam.z_f) / uz
+    return np.asarray(xf + t * ux), np.asarray(yf + t * uy), np.column_stack([ux, uy, uz])
 
 
 def mode_coupled_signal(
@@ -116,6 +170,7 @@ class HybridResult:
     signal: FloatArray  # mode-coupled, coherence-gated OCT signal per mm
     power_handoff: float  # forward power at z_h (incident power 1)
     packets: int
+    power_coherent: float = 0.0  # |c|² power of the beam at z_h (S9b-6; incident power 1)
 
 
 def hybrid_oct(
@@ -137,11 +192,17 @@ def hybrid_oct(
     estimator: str = "next_event",
     acceptance: tuple[float, float] | None = None,
     scattering: tuple[float, PhaseFunction] | None = None,
+    coherent: str = "wigner",
 ) -> HybridResult:
     """scattering: (μs, phase function) for the Monte Carlo below and on the way back above the
     hand-off; default vector Born (D9 amended 2026-11-19: the FPWPM extinction and phase function
     deviate by a few percent, BWPM K17/E9). `Calibration.scattering()` from `calibrate_with_bwpm`
-    on the same grid gives the values measured in the BWPM, as a diagnostic."""
+    on the same grid gives the values measured in the BWPM, as a diagnostic.
+
+    coherent: "wigner" (S9b-6) hands the projection onto the beam over through the exact Wigner
+    function and only the rest through Husimi (σ = sigma_husimi); "husimi" hands the whole field
+    over through Husimi (S9b-3/4, biased for a tight focus: the smoothing widens the beam by
+    σ² + d²/(4σ²k²) at a distance d behind z_h)."""
     from rtt_fusion.phasespace import field_to_packets
     from rtt_fusion.ports import GriddedField, Port, power
 
@@ -163,10 +224,38 @@ def hybrid_oct(
         e_h = res.planes[nz][0]
     else:
         e_h = e0
-    g_h = GriddedField(Port(z_h, 1, complex(n0), wavelength_um), dx, dx, e_h)
+    if coherent not in ("wigner", "husimi"):
+        raise ValueError("coherent must be 'wigner' or 'husimi'")
+    port_h = Port(z_h, 1, complex(n0), wavelength_um)
+    if coherent == "wigner":
+        e_g = free_field(e0, n0, wavelength_um, dx, z_h) if z_h > 0 else e0
+        c, e_s = split_coherent(e_h, e_g)
+        p_c = abs(c) ** 2 * power(GriddedField(port_h, dx, dx, e_g))
+    else:
+        e_s, p_c = e_h, 0.0
+    p_s = power(GriddedField(port_h, dx, dx, e_s))
+    # packets split by power (equal weights); a vanishing rest (z_h = 0) gets none
+    m_c = packets if p_s <= 1e-12 * (p_c + p_s) else round(packets * p_c / (p_c + p_s))
     sig = sigma_husimi if sigma_husimi is not None else 0.5 * beam.w_f
-    pk = field_to_packets(g_h, packets, sig, rng, periodic=True)
-    p_h = float(pk.weight.sum()) / p_in
+    xs: list[FloatArray] = []
+    ys: list[FloatArray] = []
+    us: list[FloatArray] = []
+    ws: list[FloatArray] = []
+    if m_c > 0:
+        xc, yc, uc = gaussian_beam_packets(beam, n0, wavelength_um, z_h, m_c, rng)
+        xs.append(xc)
+        ys.append(yc)
+        us.append(uc)
+        ws.append(np.full(m_c, p_c / m_c))
+    if packets > m_c:
+        g_s = GriddedField(port_h, dx, dx, e_s)
+        pk = field_to_packets(g_s, packets - m_c, sig, rng, periodic=True)
+        xs.append(np.asarray(pk.x, dtype=np.float64))
+        ys.append(np.asarray(pk.y, dtype=np.float64))
+        us.append(np.column_stack([pk.ux, pk.uy, pk.uz]).astype(np.float64))
+        ws.append(np.asarray(pk.weight, dtype=np.float64))
+    weight = np.concatenate(ws) / p_in
+    p_h = float(weight.sum())
     b = born(medium, n0, wavelength_um)
     mus_mc, phase_mc = scattering if scattering is not None else (b.mus, b.phase)
     stack = Stack(
@@ -177,14 +266,14 @@ def hybrid_oct(
         n0,
         n0,
     )
-    m = pk.x.size
+    m = weight.size
     src = Sources(
-        np.asarray(pk.x).astype(np.float64),
-        np.asarray(pk.y).astype(np.float64),
+        np.concatenate(xs),
+        np.concatenate(ys),
         np.full(m, max(z_h, 1e-12)),
         np.ones(m, dtype=np.int64),
-        np.asarray(pk.weight / p_in).astype(np.float64),
-        np.column_stack([pk.ux, pk.uy, pk.uz]).astype(np.float64),
+        weight,
+        np.concatenate(us),
     )
     if estimator not in ("next_event", "direct"):
         raise ValueError("estimator must be 'next_event' or 'direct'")
@@ -221,4 +310,4 @@ def hybrid_oct(
         )
         gate(coupled, (n0 * z_h + (pr.path @ pr.n_layer)[top]) / 2)
     sig_z /= sigma * np.sqrt(2 * np.pi)
-    return HybridResult(np.asarray(z), np.asarray(sig_z), p_h, m)
+    return HybridResult(np.asarray(z), np.asarray(sig_z), p_h, m, p_c / p_in)

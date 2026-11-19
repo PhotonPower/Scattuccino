@@ -58,6 +58,11 @@ Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - S9b-5: Monte Carlo im Hybrid mit den in der BWPM gemessenen Streuparametern
   (`Calibration.scattering()`, `hybrid_oct(scattering=…)`); Raumwinkel-Jacobi in der g-Auswertung;
   Abnahmeauftrag mit Kalibrierschritt.
+- S9b-6: kohärente Übergabe ohne Husimi-Bias (#31): Projektion des Feldes an der Übergabe auf den
+  frei propagierten Strahl (`hybrid.split_coherent`, `hybrid.free_field`), kohärenter Anteil aus der
+  Wigner-Funktion des Gaußstrahls (`hybrid.gaussian_beam_packets`), nur der Rest über Husimi;
+  `hybrid_oct(coherent="wigner")` (Standard, `"husimi"` wie bisher), `HybridResult.power_coherent`;
+  Test T18 (Einfachstreuung im engen Fokus gegen geschlossene Form).
 - S9b-7: vektorielle Born-Referenz `microstructure.born(vector=True)` (Standard, Dipolfaktor
   (1 + cos²θ)/2; `vector=False` skalar wie bisher) und Leistung der gestreuten ebenen Wellen mit E_z
   (`microstructure.plane_wave_power`) in `calibrate_with_bwpm` und `tools/calibrate_bwpm.py`, nach

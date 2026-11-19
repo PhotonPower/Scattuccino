@@ -31,7 +31,8 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T17a | Hybrid-OCT, Kette: Fokus des Gauß-Strahls, Modenkopplung eines Strahls, Leistung an der Übergabe | analytisch | S9b-3a | ✅ |
 | T17b | Next-Event-Schätzer der Modenkopplung: gleich dem direkten Schätzer (Mehrmoden-Akzeptanz), Ereignisse stapelweise = gespeichert, Kopplung eines Punktstreuers ∝ Modenintensität | direkter Schätzer; exakt | S9b-4 | ✅ |
 | T16b | Gemessene Streuparameter aus der BWPM für den Monte Carlo: μs aus der Extinktion; Phasenfunktion vorwärts gemessen, rückwärts und unter der Winkelauflösung des Gitters Born (absolut) – normiert, Rückwärtsteil = Born auf 5 % | exakt / Born | S9b-5 | ✅ |
-| T17 | Hybrid-OCT: Unabhängigkeit von z_h (Server, `docs/agent-server-s9b4.md`), gegen erweitertes Huygens-Fresnel | S9b-4, S9c | ○ |
+| T18 | Kohärente Übergabe: Wigner-Pakete mit den Momenten des Gaußstrahls; Projektion teilt die Leistung exakt; Einfachstreuung im engen Fokus (z_h = 0) gegen geschlossene Form; kohärenter Anteil hinter 3 µm Zufallsmedium gegen e^(−μs z_h) | analytisch; Born | S9b-6 | ✅ |
+| T17 | Hybrid-OCT: Unabhängigkeit von z_h (Server; #29: w_f = 2 µm mit Husimi nicht bestanden, Ursache Husimi-Glättung → S9b-6; Wiederholung mit engem Fokus nach S9b-6), gegen erweitertes Huygens-Fresnel | S9b-4, S9c | ◐ |
 | T16 | Zufallsmedium (Whittle-Matérn): Born gegen geschlossene Form, Feldstatistik, eine BWPM-Realisierung reproduziert Born-μs und g | exakt; Statistik; Born | S9b-2 | ✅ (Kalibrierläufe auf dem Server offen) |
 | T16c | Vektorielle Born-Näherung (Dipolfaktor) gegen geschlossene Form; Leistung ebener Wellen mit E_z; BWPM-Realisierung: μs gegen vektorielles Born, g vorwärts als bekannte Abweichung (BWPM E9, `xfail`) | exakt; vektorielles Born | S9b-7 | ◐ (g: Grenze der FPWPM) |
 | T11 | Jacobi-Matrizen | finite Differenzen | S10 | ○ |
@@ -434,3 +435,24 @@ r/cos²θ zu groß).
 - Folge für den Hybrid: Born als Standard im Monte Carlo ist jetzt vektoriell (μs −4,9 %, g 0,935 →
   0,948 für das Medium aus #29); die Rückwärtshälfte der gemessenen Phasenfunktion (T16b) ebenfalls,
   bei 180° unverändert.
+
+## T18: Kohärente Übergabe ohne Husimi-Bias (S9b-6)
+
+`hybrid.split_coherent`: Projektion des Feldes an der Übergabe auf den frei propagierten Strahl
+(`hybrid.free_field`); der kohärente Anteil kommt aus der Wigner-Funktion des Gaußstrahls
+(`hybrid.gaussian_beam_packets`), nur der Rest über Husimi (Entwurf D8, Ergänzung; #31).
+
+- Wigner-Pakete: Varianzen von Ort, Wellenvektor und Korrelation gleich dem Gaußstrahl
+  (w(z)²/4, 1/w_f², Δz·Var u) innerhalb 1,5 % (5σ) bei 4·10⁵ Paketen.
+- Projektion: |c|² zweier versetzter Gauß-Strahlen exakt (10⁻⁹), Leistung ohne Kreuzterm (10⁻¹²).
+- **Einfachstreuung im engen Fokus** (w_f = 2 µm, z_f = 12 µm, z_h = 0, μs = 1 /mm isotrop, 6 Seeds à
+  4·10⁵): Hybrid-Signal / geschlossene Form 0,994–1,016 bei 0,4–2 % Standardfehler (5–50 µm). Mit
+  der bisherigen Husimi-Übergabe (σ = 0,6 µm) 0,85 → 0,37 – der Befund aus #29 direkt sichtbar.
+  Vorwärts gerichtete HG (g = 0,9) gibt dasselbe Mittel, aber schwere Ausläufer (rückgestreut, dann
+  vorwärts in die Mode: p(1)/p(−1) ≈ 7000); der Test nimmt isotrope Streuung.
+- Kohärenter Anteil hinter 3 µm Zufallsmedium (nx = 96): 0,537 gegen Born e^(−μs z_h) = 0,549.
+- **Lokal, nur orientierend** (nx = 128, Born, 3·10⁵ Pakete, Verhältnis zu z_h = 0 bei 16–22 µm):
+  Husimi 1,28 (z_h = 5 µm) / 1,31 (10 µm), Wigner 0,91 / 0,77 (3 Seeds); eine Wiederholung bei
+  10 µm mit 4 Seeds ergibt 0,93 ± 0,10 / 1,06 ± 0,24 / 0,85 ± 0,10 für σ = 0,25 / 0,4 / 0,8 µm
+  (z_h = 0 selbst ±9 %). Keine σ-Abhängigkeit nachweisbar; ob neben der Husimi-Glättung ein
+  zweiter Effekt bleibt, entscheidet erst die Abnahme mit 10⁷ Paketen (T17).
