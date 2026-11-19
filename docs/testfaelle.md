@@ -27,7 +27,7 @@ Status: ✅ umgesetzt und grün, ◐ teilweise, ○ geplant.
 | T8 | Fluoreszenz und Raman: ohne Streuung gegen geschlossene Lösung; Energie der Emission; vorwärts gegen adjungiert (Fluchtfunktion); räumlich versetzte Detektion (SORS) | E₂-Integral; exakt; unabhängige Läufe; Verhalten | S7a | ✅ |
 | T9 | Dynamik: Impulsübertrag (⟨1 − cos θ⟩ = 1 − g), DCS gegen Korrelationsdiffusion, Speckle-Kontrast gegen geschlossene Form, Tiefenempfindlichkeit in zwei Schichten | exakt; Boas & Yodh; Bandyopadhyay | S8a | ✅ |
 | T10a | OCT (Intensitätsmodell): Einfach-Rückstreuung gegen exaktes Integral; Kohärenz-Gating erhält das Signal; Anteil der Mehrfachstreuung und Beer-Gesetz des OCT | exakt; Integral; Verhalten | S9a | ✅ |
-| T10b | OCT mit Fokus (Fieldtracing), Übergang BWPM, erweitertes Huygens-Fresnel; S9c-1: geschlossene Form gegen Quadratur von Gl. 21 und A1, Grenzfälle, thrane2000 Abb. 2 und 3 | Thrane, Schmitt; Querprobe BWPM | S9b/c | ◐ (S9c-1 ✅) |
+| T10b | OCT mit Fokus (Fieldtracing), Übergang BWPM, erweitertes Huygens-Fresnel; S9c-1: geschlossene Form gegen Quadratur von Gl. 21 und A1, Grenzfälle, thrane2000 Abb. 2 und 3; S9c-2: allgemeines EHF mit Gaußscher MTF = geschlossene Form | Thrane, Schmitt, Lutomirski–Yura; Querprobe BWPM | S9b/c | ◐ (S9c-1, S9c-2 ✅) |
 | T17a | Hybrid-OCT, Kette: Fokus des Gauß-Strahls, Modenkopplung eines Strahls, Leistung an der Übergabe | analytisch | S9b-3a | ✅ |
 | T17b | Next-Event-Schätzer der Modenkopplung: gleich dem direkten Schätzer (Mehrmoden-Akzeptanz), Ereignisse stapelweise = gespeichert, Kopplung eines Punktstreuers ∝ Modenintensität | direkter Schätzer; exakt | S9b-4 | ✅ |
 | T16b | Gemessene Streuparameter aus der BWPM für den Monte Carlo: μs aus der Extinktion; Phasenfunktion vorwärts gemessen, rückwärts und unter der Winkelauflösung des Gitters Born (absolut) – normiert, Rückwärtsteil = Born auf 5 % | exakt / Born | S9b-5 | ✅ |
@@ -476,3 +476,43 @@ r/cos²θ zu groß).
   kommt vom Ablesen der Achsen. Toleranz 0,25 Dekaden.
 - Bei den Parametern der Abbildungen ist w_H²/w_S² ≪ 1; ob dort mit 2 oder 4 gerechnet wurde, ist
   nicht zu unterscheiden.
+
+## T10b: Allgemeines EHF mit der Phasenfunktion des Mediums (S9c-2)
+
+`scattuccino.ehf` (`overlap_width`, `phase_correlation`, `spherical_mtf`, `general_efficiency`);
+Test `tests/test_s9c2_ehf.py`. Geometrie des Hybrids: Medium mit angepasster Brechzahl ab der
+Oberfläche, Strahl U = exp(−a p²) an der Oberfläche, Wellenzahl k im Medium. Das Signal ist das
+Überlappintegral der mittleren Intensitäten von Beleuchtung und Detektionsmode (lutomirski1971
+Gl. 10; thrane2000 Gl. 11, 15, 16), nach Parseval Ψ = ∫ M_s² e^(−ϱ²/A²) d²ϱ/(πA²) mit
+M_s = exp{−μs z [1 − ∫₀¹ b(ϱu) du]} (lutomirski1971 Gl. 11, Kugelwelle) und
+b(ρ) = 2π ∫ p(cos θ) J₀(kρ sin θ) sin θ dθ über die Vorwärtshälfte.
+
+- A gegen w_H aus thrane2000 Gl. 13 (w_H² = 2z²/(k²A²)) auf 10⁻¹².
+- Mit der Gaußschen MTF von thrane2000 Gl. 20 und ρ₀ aus S9c-1 reproduziert die allgemeine Form
+  die geschlossene Form (n = 1, Linse an der Oberfläche) auf 10⁻⁶ – auch den Kreuzterm 4 (#36).
+- b(ρ) einer schmalen Gaußkeule (θ_r = 0,05) gegen exp(−k²θ_r²ρ²/4) auf 2·10⁻³; M_s einer
+  Gaußschen Korrelation gegen √π erf(c)/(2c) auf 10⁻⁶; ohne Streuung Ψ = 1.
+
+**Befund Brechzahl:** In thrane2000 Gl. A1 steht in der Streuphase die Vakuum-Wellenzahl k mit
+der reduzierten Länge B(s) = s/n. Ist θ_rms der Streuwinkel im Gewebe (so in den Beispielen,
+θ_rms = arccos g), ist ρ₀ dort um den Faktor n zu groß; in der Herleitung hier (Wellenzahl im
+Medium) tritt n nicht gesondert auf. Für das Medium unten ändert das Ψ um den Faktor 1,02 (5 µm) bis 1,8 (≥ 30 µm)
+(Issue mit Label `paper`).
+
+**Medium aus #29** (vektorielles Born: μs = 190,3/mm, g = 0,948; Vorwärtsanteil b(0) = 0,995),
+Strahl der Hybridläufe (w_f = 2 µm, Fokus 12 µm, n₀ = 1,38, λ = 0,8 µm). Dokumentiert, ohne
+Toleranz (D11):
+
+| z (µm) | Ψ allgemein | geschlossen, θ_e = 0,148 (levitz2004) | dasselbe mit k₀ wie gedruckt | geschlossen, θ = arccos g = 0,325 | e^(−2μs z) |
+| --- | --- | --- | --- | --- | --- |
+| 5 | 0,822 | 0,955 | 0,976 | 0,821 | 0,149 |
+| 10 | 0,423 | 0,641 | 0,769 | 0,285 | 0,022 |
+| 20 | 0,090 | 0,176 | 0,288 | 0,043 | 4,9·10⁻⁴ |
+| 30 | 0,034 | 0,083 | 0,148 | 0,018 | 1,1·10⁻⁵ |
+| 40 | 0,020 | 0,057 | 0,103 | 0,012 | 2,4·10⁻⁷ |
+| 60 | 0,011 | 0,038 | 0,070 | 0,008 | 1,2·10⁻¹⁰ |
+
+Die Whittle-Matérn-Phasenfunktion (scharfe Spitze, breiter Fuß) liegt zwischen den beiden
+Gaußschen Näherungen; keine trifft sie auf besser als einen Faktor 1,5–3. Ab z ≈ 10 µm dominiert
+nach dem EHF das vorwärts mehrfach gestreute Licht (Ψ ≫ e^(−2μs z)). Das ist die Größe, gegen die
+S9c-3 die Hybriddaten aus #34 vergleicht (D12).

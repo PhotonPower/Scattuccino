@@ -36,10 +36,11 @@ der Unterschied ohne Belang, weil dort w_H²/w_S² ≪ 1 ist.
 Der erste Term ist im Grenzfall μs z ≪ 1 die Einfachstreuung im Fokus, die T18 bereits als
 geschlossene Form prüft. Das verbindet S9c mit vorhandenen Tests.
 
-**Offener Punkt für S9c-2:** In Gl. A1 steht die Vakuum-Wellenzahl k mit der reduzierten
-Länge B(s) = s/n. Daraus folgt eine Aufweitung des Halos w_S² − w_H² = θ_rms² μs z³/(3n²),
-unabhängig von d. Ob θ_rms der Winkel im Gewebe ist (dann wäre der Faktor 1/n² zu prüfen), klärt
-die eigene Herleitung in S9c-2 für die Geometrie des Hybrids (Mode im Medium, Brechzahl angepasst).
+**Brechzahl (geklärt in S9c-2, T10b):** In Gl. A1 steht die Vakuum-Wellenzahl k mit der
+reduzierten Länge B(s) = s/n; daraus folgt eine Aufweitung des Halos w_S² − w_H² =
+θ_rms² μs z³/(3n²). Ist θ_rms der Winkel im Gewebe, ist ρ₀ um den Faktor n zu groß. Die allgemeine
+Form (S9c-2) rechnet mit der Wellenzahl im Medium und reproduziert die geschlossene Form für n = 1
+exakt.
 
 ## D11: Welche Form des EHF (freigegeben: C)
 
