@@ -37,6 +37,17 @@ Kurzzeit-Fourier-Transformation von E auf dem BWPM-Gitter (FFT je Fensterpositio
 Richtung k⊥/(n k₀) (evaneszente Anteile verworfen und als Verlust gebucht), Polarisation aus den
 Feldkomponenten des Fensters (Stokes-Vektor, für S6).
 
+**Ergänzung 2026-11-19 (S9b-6, #31, freigegeben):** Die Husimi-Glättung verbreitert die
+Beleuchtung im Abstand d hinter der Übergabe um σ² + d²/(4σ²n²k₀²), mindestens um d/(nk₀) – für einen
+engen Fokus (w_f = 2 µm: Modenvarianz w_f²/4 = 1 µm²) kein kleiner Fehler (Abnahme S9b-4, #29:
+Signal hinter der Übergabe hängt um 10–25 % von z_h ab). Deshalb wird das Feld bei z_h zerlegt:
+Projektion c = ⟨E_G, E_h⟩/⟨E_G, E_G⟩ auf den frei bis z_h propagierten einfallenden Strahl E_G;
+der kohärente Anteil c·E_G wird aus der (positiven, analytischen) Wigner-Funktion des Gaußstrahls
+gezogen – ohne Glättung –, nur der orthogonale Rest δE = E_h − c·E_G über Husimi. Die Leistung teilt
+sich exakt (|E_h|² = |c|²|E_G|² + |δE|², keine Doppelzählung); z_h = 0 ist damit der exakte reine
+Monte Carlo. Der Rest δE ist im Phasenraum breit (gestreutes Licht), σ ≈ 0,4 µm genügt dort. Für
+eine ebene Welle ist die Projektion der kohärente Anteil der Kalibrierung (Mittelwert des Feldes).
+
 **Prüfungen:** Leistung erhalten; Fokus ohne Streuung: Pakete aus C, ballistisch weitergeführt,
 treffen den Fokus wie die BWPM-Fortsetzung des Feldes (Strehl-Ort, Breite innerhalb σ);
 diffuses Zufallsfeld: Richtungsverteilung lambertsch.
